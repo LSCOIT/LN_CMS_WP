@@ -18,6 +18,6 @@
   <!-- Show sniff codes in all reports -->
   <arg value="ns"/>
 
-  <!-- Use PSR-2 as a base -->
-  <rule ref="PSR2"/>
+  <!-- Use WordPress as a base -->
+  <rule ref="WordPress"/>
 </ruleset>

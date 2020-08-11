@@ -1,0 +1,28 @@
+#edittag {
+  max-width: none;
+}
+
+.upload-topic-table {
+  border-collapse: collapse;
+}
+
+table.upload-topic-table,
+.upload-topic-table th,
+.upload-topic-table td {
+  border: 1px solid black;
+}
+
+.upload-topic-table th,
+.upload-topic-table td {
+  padding: 4px;
+  text-align: center;
+}
+
+.upload-topic-table td input[type='radio'] {
+  margin-right: 0;
+}
+
+.upload-topic-table td:first-child,
+.upload-topic-table th:first-child {
+  width: 30px;
+}

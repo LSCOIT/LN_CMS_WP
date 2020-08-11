@@ -1,0 +1,20 @@
+.upload-resource-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table.upload-resource-table,
+.upload-resource-table th,
+.upload-resource-table td {
+  border: 1px solid black;
+}
+
+.upload-resource-table th,
+.upload-resource-table td {
+  padding: 4px;
+  text-align: center;
+}
+
+.upload-resource-table td input[type='radio'] {
+  margin-right: 0;
+}
