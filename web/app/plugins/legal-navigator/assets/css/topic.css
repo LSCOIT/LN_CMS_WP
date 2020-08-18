@@ -1,0 +1,53 @@
+#edittag {
+  max-width: none;
+}
+
+.upload-topic-table {
+  border-collapse: collapse;
+  margin-bottom: 10px;
+}
+
+#upload-message {
+  margin-bottom: 10px;
+}
+
+#upload-message:empty {
+  margin-bottom: 0;
+}
+
+#upload-message.success {
+  color: green;
+}
+
+#upload-message.error {
+  color: red;
+}
+
+table.upload-topic-table,
+.upload-topic-table th,
+.upload-topic-table td {
+  border: 1px solid black;
+}
+
+.upload-topic-table th,
+.upload-topic-table td {
+  padding: 4px;
+  text-align: center;
+}
+
+.upload-topic-table td input[type='radio'] {
+  margin-right: 0;
+}
+
+.upload-topic-table td:first-child,
+.upload-topic-table th:first-child {
+  width: 30px;
+}
+
+.form-field select {
+  max-width: 600px;
+}
+
+.row-actions .delete {
+  display: none;
+}

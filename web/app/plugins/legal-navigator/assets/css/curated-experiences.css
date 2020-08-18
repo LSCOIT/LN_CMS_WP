@@ -1,0 +1,17 @@
+#upload-form {
+  display: none;
+}
+
+.checkboxes-box {
+  margin-bottom: 20px;
+}
+
+.dataTables_wrapper {
+  background-color: #fff;
+  padding: 10px;
+}
+
+#upload-message {
+  display: none;
+  margin-top: 10px;
+}

@@ -1,0 +1,22 @@
+{
+  "cSpell.words": [
+    "ABSPATH",
+    "autoloader",
+    "codesniffer",
+    "cyrlitera",
+    "muplugin",
+    "oscarotero",
+    "phpcs",
+    "phpdotenv",
+    "roave",
+    "squizlabs",
+    "trailingslashit",
+    "vlucas",
+    "wordpress",
+    "wpackagist"
+  ],
+  "phpcs.standard": "WordPress",
+  "php-cs-fixer.rules": "WordPress",
+  "namespaceResolver.highlightOnOpen": true,
+  "namespaceResolver.sortOnSave": true
+}
