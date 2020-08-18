@@ -23,6 +23,7 @@ class LSC_Resources
     add_action('restrict_manage_posts', [$this, 'posts_filter_dropdown']);
     add_filter('request', [$this, 'filter_resources']);
     add_filter('acf/fields/taxonomy/query/key=field_topics', [$this, 'filter_topics']);
+    add_action('before_delete_post', [$this, 'delete_resource_from_server']);
   }
 
   function rename_posts_labels($labels)
@@ -115,17 +116,144 @@ class LSC_Resources
           ]
         ),
         array(
+          'key' => 'field_resource_address',
+          'label' => 'Address',
+          'name' => 'resource_address',
+          'type' => 'text',
+          'conditional_logic' => [
+            [
+              [
+                'field' => 'field_resource_type',
+                'operator' => '==',
+                'value' => 'Organizations',
+              ],
+            ],
+          ],
+          'wrapper' => [
+            'width' => 33
+          ],
+        ),
+        array(
+          'key' => 'field_resource_telephone',
+          'label' => 'Telephone',
+          'name' => 'resource_telephone',
+          'type' => 'text',
+          'conditional_logic' => [
+            [
+              [
+                'field' => 'field_resource_type',
+                'operator' => '==',
+                'value' => 'Organizations',
+              ],
+            ],
+          ],
+          'wrapper' => [
+            'width' => 33
+          ]
+        ),
+        array(
+          'key' => 'field_resource_specialties',
+          'label' => 'Specialties',
+          'name' => 'resource_specialties',
+          'type' => 'text',
+          'conditional_logic' => [
+            [
+              [
+                'field' => 'field_resource_type',
+                'operator' => '==',
+                'value' => 'Organizations',
+              ],
+            ],
+          ],
+          'wrapper' => [
+            'width' => 34
+          ]
+        ),
+        array(
+          'key' => 'field_resource_qualifications',
+          'label' => 'Qualifications',
+          'name' => 'resource_qualifications',
+          'type' => 'text',
+          'conditional_logic' => [
+            [
+              [
+                'field' => 'field_resource_type',
+                'operator' => '==',
+                'value' => 'Organizations',
+              ],
+            ],
+          ],
+          'wrapper' => [
+            'width' => 33
+          ]
+        ),
+        array(
+          'key' => 'field_resource_business_hours',
+          'label' => 'Business Hours',
+          'name' => 'resource_business_hours',
+          'type' => 'text',
+          'conditional_logic' => [
+            [
+              [
+                'field' => 'field_resource_type',
+                'operator' => '==',
+                'value' => 'Organizations',
+              ],
+            ],
+          ],
+          'wrapper' => [
+            'width' => 33
+          ]
+        ),
+        array(
+          'key' => 'field_resource_category',
+          'label' => 'Category',
+          'name' => 'resource_category',
+          'type' => 'text',
+          'conditional_logic' => [
+            [
+              [
+                'field' => 'field_resource_type',
+                'operator' => '==',
+                'value' => 'Organizations',
+              ],
+            ],
+          ],
+          'wrapper' => [
+            'width' => 33
+          ]
+        ),
+        array(
+          'key' => 'field_resource_eligibility_information',
+          'label' => 'Eligibility Information',
+          'name' => 'resource_eligibility_information',
+          'type' => 'textarea',
+          'conditional_logic' => [
+            [
+              [
+                'field' => 'field_resource_type',
+                'operator' => '==',
+                'value' => 'Organizations',
+              ],
+            ],
+          ],
+        ),
+        array(
           'key' => 'field_locations',
           'label' => 'Locations',
           'name' => 'locations',
           'type' => 'repeater',
           'layout' => 'table',
+          'min' => 1,
+          'required' => 1,
           'sub_fields' => array(
             array(
               'key' => 'field_state',
               'label' => 'State',
               'name' => 'state',
-              'type' => 'text',
+              'type' => 'select',
+              'allow_null' => 1,
+              'choices' => $this->get_organizational_unit(),
               'wrapper' => [
                 'width' => 28
               ]
@@ -195,6 +323,14 @@ class LSC_Resources
             ),
           ),
         ),
+        array(
+          'key' => 'field_resource_display',
+          'label' => 'Display',
+          'name' => 'resource_display',
+          'type' => 'true_false',
+          'acfe_permissions' => ['administrator', 'editor'],
+          'ui' => 1,
+        ),
       ),
       'location' => array(
         array(
@@ -212,7 +348,7 @@ class LSC_Resources
   {
     $units = get_organizational_unit();
 
-    if (!current_user_can('manage_options')) {
+    if (get_current_user_id() && !current_user_can('manage_options')) {
       $current_user_id = get_current_user_id();
       $org_unit = get_field('user_organizational_unit', "user_{$current_user_id}");
       $filtered_unit = [$org_unit => $units[$org_unit]];
@@ -262,15 +398,18 @@ class LSC_Resources
   function upload_resource_meta_box($post)
   {
     $servers = get_field('connections', 'option');
-    $upload_time = get_post_meta($post->ID, '_upload_time', true);
+    $upload_time = get_post_meta($post->ID, '_server_updates', true);
     $table = [];
     foreach ($servers as $server) {
       $server_id = $server['connection_dir_id'];
-      $table[] = [
-        'value' => $server_id,
-        'title' => $server['connection_name'],
-        'time' => !empty($upload_time[$server_id]) ? date('d/m/Y H:i', strtotime($upload_time[$server_id])) : 'Never'
-      ];
+      $user = wp_get_current_user();
+      if (current_user_can('administrator') || array_intersect($user->roles, $server['connection_allowed_for'])) {
+        $table[] = [
+          'value' => $server_id,
+          'title' => $server['connection_name'],
+          'time' => !empty($upload_time[$server_id]) ? wp_date('d/m/Y H:i', strtotime($upload_time[$server_id])) : 'Never'
+        ];
+      }
     }
 ?>
     <table class="upload-resource-table">
@@ -285,11 +424,12 @@ class LSC_Resources
             <input type="radio" name="server_id" value="<?php echo esc_attr($item['value']); ?>">
           </td>
           <td><?php echo $item['title']; ?></td>
-          <td><?php echo $item['time']; ?></td>
+          <td class="date_<?php echo esc_attr($item['value']); ?>"><?php echo $item['time']; ?></td>
         </tr>
       <?php } ?>
     </table>
-    <?php submit_button('Upload to server', 'primary', 'upload-resource'); ?>
+    <div id="upload-message"></div>
+    <?php submit_button('Upload to server', 'primary', 'upload-resource', false); ?>
     <?php
   }
 
@@ -343,6 +483,10 @@ class LSC_Resources
 
   function posts_filter_dropdown()
   {
+    if ('edit-post' !== get_current_screen()->id) {
+      return;
+    }
+
     if (current_user_can('manage_options')) {
       $current_org_unit = filter_input(INPUT_GET, 'org_unit');
     ?>
@@ -373,7 +517,7 @@ class LSC_Resources
 
     $args['meta_query'] = [];
 
-    if (!current_user_can('manage_options')) {
+    if (get_current_user_id() && !current_user_can('manage_options')) {
       $current_user_id = get_current_user_id();
       $org_unit = get_field('user_organizational_unit', "user_{$current_user_id}");
       $args['meta_query'][] = [
@@ -403,7 +547,7 @@ class LSC_Resources
   {
     $args['meta_query'] = [];
 
-    if (!current_user_can('manage_options')) {
+    if (get_current_user_id() && !current_user_can('manage_options')) {
       $current_user_id = get_current_user_id();
       $org_unit = get_field('user_organizational_unit', "user_{$current_user_id}");
       $args['meta_query'][] = [
@@ -413,5 +557,21 @@ class LSC_Resources
     }
 
     return $args;
+  }
+
+  function delete_resource_from_server($post_id)
+  {
+    $resource_uid = get_post_meta($post_id, '_resource_id', true);
+    $servers = get_field('connections', 'option');
+
+    $resource = [
+      $resource_uid => get_post_field('post_title', $post_id)
+    ];
+
+    $server = new LSC_Server();
+
+    foreach ($servers as $serv) {
+      $server->resource_request($serv['connection_dir_id'], 'delete', 'resources', $resource);
+    }
   }
 }

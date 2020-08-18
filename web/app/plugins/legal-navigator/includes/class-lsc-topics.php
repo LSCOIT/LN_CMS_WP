@@ -28,6 +28,7 @@ class LSC_Topics
     add_action('category_add_form', array($this, 'pre_form'));
     add_action('after-category-table', array($this, 'add_topic_filters'));
     add_filter('get_terms_args', array($this, 'filter_topics'));
+    add_action('pre_delete_term', [$this, 'delete_topic_from_servers'], 10, 2);
   }
 
 
@@ -82,13 +83,17 @@ class LSC_Topics
           'label' => 'Locations',
           'name' => 'topic_locations',
           'type' => 'repeater',
+          'min' => 1,
+          'required' => 1,
           'layout' => 'table',
           'sub_fields' => array(
             array(
               'key' => 'field_topic_state',
               'label' => 'State',
               'name' => 'topic_state',
-              'type' => 'text',
+              'type' => 'select',
+              'allow_null' => 1,
+              'choices' => $this->get_organizational_unit(),
               'wrapper' => [
                 'width' => 28
               ]
@@ -133,6 +138,7 @@ class LSC_Topics
           'label' => 'Icon',
           'name' => 'icon',
           'type' => 'image',
+          'return_format' => 'url',
         ),
         array(
           'key' => 'field_topic_ranking',
@@ -143,10 +149,12 @@ class LSC_Topics
           'required' => 1,
         ),
         array(
-          'key' => 'field_display_icon',
+          'key' => 'field_display',
           'label' => 'Display',
           'name' => 'display',
           'type' => 'true_false',
+          'acfe_permissions' => ['administrator', 'editor'],
+          'ui' => 1,
         ),
       ),
       'location' => array(
@@ -165,7 +173,7 @@ class LSC_Topics
   {
     $units = get_organizational_unit();
 
-    if (!current_user_can('manage_options')) {
+    if (get_current_user_id() && !current_user_can('manage_options')) {
       $current_user_id = get_current_user_id();
       $org_unit = get_field('user_organizational_unit', "user_{$current_user_id}");
       $filtered_unit = [$org_unit => $units[$org_unit]];
@@ -240,15 +248,18 @@ class LSC_Topics
   function server_sync($term)
   {
     $servers = get_field('connections', 'option');
-    $upload_time = get_term_meta($term->term_id, '_upload_time', true);
+    $upload_time = get_term_meta($term->term_id, '_server_updates', true);
     $table = [];
     foreach ($servers as $server) {
       $server_id = $server['connection_dir_id'];
-      $table[] = [
-        'value' => $server_id,
-        'title' => $server['connection_name'],
-        'time' => !empty($upload_time[$server_id]) ? date('d/m/Y H:i', strtotime($upload_time[$server_id])) : 'Never'
-      ];
+      $user = wp_get_current_user();
+      if (current_user_can('administrator') || array_intersect($user->roles, $server['connection_allowed_for'])) {
+        $table[] = [
+          'value' => $server_id,
+          'title' => $server['connection_name'],
+          'time' => !empty($upload_time[$server_id]) ? wp_date('d/m/Y H:i', strtotime($upload_time[$server_id])) : 'Never'
+        ];
+      }
     }
   ?>
     <table class="form-table">
@@ -267,11 +278,12 @@ class LSC_Topics
                   <input type="radio" name="server_id" value="<?php echo esc_attr($item['value']); ?>">
                 </td>
                 <td><?php echo $item['title']; ?></td>
-                <td><?php echo $item['time']; ?></td>
+                <td class="date_<?php echo esc_attr($item['value']); ?>"><?php echo $item['time']; ?></td>
               </tr>
             <?php } ?>
           </table>
-          <?php submit_button('Upload to server', 'primary', 'upload-topic'); ?>
+          <div id="upload-message"></div>
+          <?php submit_button('Upload to server', 'primary', 'upload-topic', false); ?>
         </td>
       </tr>
     </table>
@@ -389,7 +401,7 @@ class LSC_Topics
   {
     $args['meta_query'] = [];
 
-    if (!current_user_can('manage_options')) {
+    if (get_current_user_id() && !current_user_can('manage_options')) {
       $current_user_id = get_current_user_id();
       $org_unit = get_field('user_organizational_unit', "user_{$current_user_id}");
       $args['meta_query'][] = [
@@ -414,5 +426,26 @@ class LSC_Topics
     }
 
     return $args;
+  }
+
+  function delete_topic_from_servers($term_id, $taxonomy)
+  {
+    if ('category' !== $taxonomy) {
+      return;
+    }
+
+    $topic_uid = get_term_meta($term_id, '_topic_id', true);
+    $servers = get_field('connections', 'option');
+
+    $topic = [
+      'id' => $topic_uid,
+      'display' => 'No'
+    ];
+
+    $server = new LSC_Server();
+
+    foreach ($servers as $serv) {
+      $server->resource_request($serv['connection_dir_id'], 'insert', 'topics', [$topic]);
+    }
   }
 }

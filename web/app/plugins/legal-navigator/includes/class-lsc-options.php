@@ -70,7 +70,7 @@ class LSC_Options
                             'key' => 'field_connection_allowed_for',
                             'label' => 'Allowed for',
                             'name' => 'connection_allowed_for',
-                            'type' => 'select',
+                            'type' => 'checkbox',
                             'required' => 1,
                             'choices' => $this->get_roles(),
                             'wrapper' => [
@@ -130,14 +130,11 @@ class LSC_Options
 
     public function import_output()
     {
-        if (!current_user_can('manage_options')) {
+        if (get_current_user_id() && !current_user_can('manage_options')) {
             wp_die(__('You do not have sufficient permissions to access this page.'));
         }
 ?>
-        <div class="import-buttons">
-            <button id="clear-data" class="button action" type="button">Clear data</button>
-            <button id="import-data" class="button button-primary" type="button">Import data</button>
-        </div>
+        <?php submit_button('Import data from standard server', 'primary', 'import-data'); ?>
 
         <div id="import-data-dialog" title="Import data from Legal Navigator">
             <p>Import data from standard server. All data will be overwritten.</p>

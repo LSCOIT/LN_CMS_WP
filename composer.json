@@ -65,7 +65,9 @@
     "wp-premium/advanced-custom-fields-pro": "^5.8",
     "wpackagist-plugin/cyrlitera": "^1.1",
     "wpackagist-plugin/svg-support": "^2.3",
-    "wpackagist-plugin/user-switching": "^1.5"
+    "wpackagist-plugin/user-switching": "^1.5",
+    "wpackagist-plugin/acf-extended": "^0.8.7",
+    "wpackagist-plugin/user-role-editor": "^4.56"
   },
   "require-dev": {
     "squizlabs/php_codesniffer": "^3.5.4",

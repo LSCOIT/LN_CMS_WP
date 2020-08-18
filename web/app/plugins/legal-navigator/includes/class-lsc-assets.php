@@ -30,6 +30,8 @@ class LSC_Assets
 		wp_register_style('lsc-settings', lsc_asset_path('css/settings.css'), array('wp-jquery-ui-dialog'), LSC_VERSION);
 		wp_register_style('lsc-resource', lsc_asset_path('css/resource.css'), null, LSC_VERSION);
 		wp_register_style('lsc-topic', lsc_asset_path('css/topic.css'), null, LSC_VERSION);
+		wp_register_style('lsc-curated-experiences', lsc_asset_path('css/curated-experiences.css'), null, LSC_VERSION);
+		wp_register_style('datatables', '//cdn.datatables.net/v/dt/jqc-1.12.4/dt-1.10.21/r-2.2.5/datatables.min.css', ['lsc-curated-experiences'], null);
 
 		// Sitewide menu CSS
 		// wp_enqueue_style('game_portal_admin_menu');
@@ -41,8 +43,13 @@ class LSC_Assets
 			wp_enqueue_style('lsc-resource');
 		}
 
-		if ('edit-category' === $screen_id && !empty($_REQUEST['tag_ID'])) {
+		if ('edit-category' === $screen_id) {
 			wp_enqueue_style('lsc-topic');
+		}
+
+		if ('toplevel_page_curated-experiences' === $screen_id) {
+			wp_enqueue_style('datatables');
+			wp_enqueue_style('lsc-curated-experiences');
 		}
 	}
 
@@ -60,6 +67,8 @@ class LSC_Assets
 		wp_register_script('lsc-settings', lsc_asset_path('js/settings.js'), array('jquery', 'jquery-ui-core', 'jquery-ui-dialog', 'jquery-ui-progressbar'), LSC_VERSION);
 		wp_register_script('lsc-resource', lsc_asset_path('js/resource.js'), array('jquery'), LSC_VERSION);
 		wp_register_script('lsc-topic', lsc_asset_path('js/topic.js'), array('jquery'), LSC_VERSION);
+		wp_register_script('lsc-curated-experiences', lsc_asset_path('js/curated-experiences.js'), array('jquery'), LSC_VERSION);
+		wp_register_script('datatables', '//cdn.datatables.net/v/dt/jqc-1.12.4/dt-1.10.21/r-2.2.5/datatables.min.js', array('jquery'), null);
 
 		if ('settings_page_integration-settings' == $screen_id) {
 			wp_enqueue_script('lsc-settings');
@@ -95,6 +104,18 @@ class LSC_Assets
 			);
 
 			wp_localize_script('lsc-topic', 'lsc_topic_params', $params);
+		}
+
+		if ('toplevel_page_curated-experiences' === $screen_id) {
+			wp_enqueue_script('datatables');
+			wp_enqueue_script('lsc-curated-experiences');
+
+			$params = array(
+				'ajax_url'     => admin_url('admin-ajax.php'),
+				'curated_experiences_nonce' => wp_create_nonce('curated-experiences')
+			);
+
+			wp_localize_script('lsc-curated-experiences', 'lsc_ce_params', $params);
 		}
 	}
 }

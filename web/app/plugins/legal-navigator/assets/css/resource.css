@@ -1,6 +1,23 @@
 .upload-resource-table {
   width: 100%;
   border-collapse: collapse;
+  margin-bottom: 10px;
+}
+
+#upload-message {
+  margin-bottom: 10px;
+}
+
+#upload-message:empty {
+  margin-bottom: 0;
+}
+
+#upload-message.success {
+  color: green;
+}
+
+#upload-message.error {
+  color: red;
 }
 
 table.upload-resource-table,

@@ -25,7 +25,10 @@ class LSC_AJAX
 		$ajax_events = array(
 			'import_data',
 			'upload_resource',
-			'upload_topic'
+			'upload_topic',
+			'get_curated_experiences',
+			'upload_curated_experience',
+			'delete_curated_experience'
 		);
 
 		foreach ($ajax_events as $ajax_event) {
@@ -72,6 +75,10 @@ class LSC_AJAX
 		$modified_by = get_user_by('id', get_post_meta($post->ID, '_modified_by', true));
 
 		$locations = get_field('locations', $post->ID);
+		if (!$locations) {
+			$locations = [];
+		}
+
 		$prepared_locations = [];
 		foreach ($locations as $location) {
 			$prepared_locations[] = [
@@ -92,49 +99,60 @@ class LSC_AJAX
 			$prepared_ranking[$topic['topic']->name] = (int)$topic['ranking'];
 		}
 
+		$resource_type = get_field('resource_type', $post->ID);
+
 		$resource = [
-			'id' => get_post_meta($post->ID, '_resource_id', true),
 			'overview' => $post->post_content,
 			'name' => $post->post_title,
 			'description' => $post->post_excerpt,
-			'resourceType' => get_field('resource_type', $post->ID),
+			'resourceType' => $resource_type,
 			'url' => get_field('resource_url', $post->ID),
 			'topicTags' => $prepared_topics,
 			'organizationalUnit' => get_field('organizational_unit', $post->ID),
 			'location' => $prepared_locations,
 			'createdBy' => $created_by->display_name,
-			'createdTimeStamp' => date('Y-m-d\TH:i:s.u\Z', strtotime($post->post_date)),
 			'modifiedBy' => $modified_by->display_name,
-			'modifiedTimeStamp' => date('Y-m-d\TH:i:s.u\Z', strtotime($post->post_modified)),
-			'display' => $post->post_status === 'publish' ? 'Yes' : 'No',
+			'display' => get_field('resource_display', $post->ID) ? 'Yes' : 'No',
 			'ranking' => $prepared_ranking,
-			'delete' => 'N',
-			'xlsFileName' => null,
-			'resourceCategory' => null
 		];
 
+		if ('Organizations' === $resource_type) {
+			$resource['address'] = get_field('resource_address', $post->ID);
+			$resource['telephone'] = get_field('resource_telephone', $post->ID);
+			$resource['specialties'] = get_field('resource_specialties', $post->ID);
+			$resource['qualifications'] = get_field('resource_qualifications', $post->ID);
+			$resource['businessHours'] = get_field('resource_business_hours', $post->ID);
+			$resource['resourceCategory'] = get_field('resource_category', $post->ID);
+			$resource['eligibilityInformation'] = get_field('resource_eligibility_information', $post->ID);
+		}
+
+		if ($resource_uid = get_post_meta($post->ID, '_resource_id', true)) {
+			$resource['id'] = $resource_uid;
+		}
+
 		$server = new LSC_Server();
-		$result = $server->resource_request($server_id, 'insert', 'resources', $resource);
+		$result = $server->resource_request($server_id, 'insert', 'resources', [$resource]);
 
 		if ($result) {
+			update_post_meta($post->ID, '_resource_id', $result['id']);
+
 			$updates = get_post_meta($post->ID, '_server_updates', true);
 
 			if (!$updates) {
 				$updates = [];
 			}
 
-			$updates[$server_id] = date('Y-m-d H:i:s');
-
+			$date = date('Y-m-d H:i:s');
+			$updates[$server_id] = $date;
 			update_post_meta($post->ID, '_server_updates', $updates);
 
-			wp_send_json_success();
-		} else {
-			wp_send_json_error();
+			wp_send_json_success([
+				'text' => 'The resource is successfully uploaded',
+				'date' => wp_date('d/m/Y H:i', strtotime($date))
+			]);
 		}
 
-		wp_send_json($resource);
-		// wp_send_json_success();
-		// wp_send_json_error();
+		wp_send_json_error(['text' => 'Error during upload the resource']);
 	}
 
 	public static function upload_topic()
@@ -145,10 +163,15 @@ class LSC_AJAX
 		$server_id = $params['server_id'];
 		$term = get_term($params['term_id']);
 
-		$created_by = get_user_by('id', get_post_meta($term->term_id, '_created_by', true));
-		$modified_by = get_user_by('id', get_post_meta($term->term_id, '_modified_by', true));
+		$created_by = get_user_by('id', get_term_meta($term->term_id, '_created_by', true));
+		$modified_by = get_user_by('id', get_term_meta($term->term_id, '_modified_by', true));
 
-		$locations = get_field('locations', "category_{$term->term_id}");
+		$locations = get_field('topic_locations', "category_{$term->term_id}");
+
+		if (!$locations) {
+			$locations = [];
+		}
+
 		$prepared_locations = [];
 		foreach ($locations as $location) {
 			$prepared_locations[] = [
@@ -160,50 +183,110 @@ class LSC_AJAX
 		}
 
 		$topic = [
-			'id' => get_term_meta($term->term_id, '_topic_id', true),
 			'overview' => $term->description,
 			'parentTopicId' => $term->parent ? [['id' => $term->parent]] : [],
 			'keywords' => get_term_meta($term->term_id, 'keywords', true),
-			'icon' => wp_get_attachment_url(get_term_meta($term->term_id, 'icon', true)),
+			'icon' => get_field('icon', "category_{$term->term_id}"),
 			'name' => $term->name,
 			'organizationalUnit' => get_term_meta($term->term_id, 'topic_organizational_unit', true),
 			'location' => $prepared_locations,
 			'createdBy' => $created_by->display_name,
-			'createdTimeStamp' => date('Y-m-d\TH:i:s.u\Z', strtotime(get_term_meta($term->term_id, '_created_time', true))),
 			'modifiedBy' => $modified_by->display_name,
-			'modifiedTimeStamp' => date('Y-m-d\TH:i:s.u\Z', strtotime(get_term_meta($term->term_id, '_modified_time', true))),
 			'display' => get_term_meta($term->term_id, 'display', true) ? 'Yes' : 'No',
 			'ranking' => get_term_meta($term->term_id, 'topic_ranking', true),
-			'resourceCategory' => null,
 			'resourceType' => 'Topics',
-			'url' => null,
-			'topicTags' => [],
-			'delete' => 'N',
-			'xlsFileName' => null,
-			'description' => null
 		];
 
+		if ($topic_uid = get_term_meta($term->term_id, '_topic_id', true)) {
+			$topic['id'] = $topic_uid;
+		}
+
 		$server = new LSC_Server();
-		$result = $server->resource_request($server_id, 'insert', 'topics', $topic);
+		$result = $server->resource_request($server_id, 'insert', 'topics', [$topic]);
 
 		if ($result) {
+			update_term_meta($term->term_id, '_topic_id', $result['id']);
+
 			$updates = get_term_meta($term->term_id, '_server_updates', true);
 
 			if (!$updates) {
 				$updates = [];
 			}
 
-			$updates[$server_id] = date('Y-m-d H:i:s');
-
+			$date = date('Y-m-d H:i:s');
+			$updates[$server_id] = $date;
 			update_term_meta($term->term_id, '_server_updates', $updates);
 
-			wp_send_json_success();
-		} else {
-			wp_send_json_error();
+			wp_send_json_success([
+				'text' => 'The topic is successfully uploaded',
+				'date' => wp_date('d/m/Y H:i', strtotime($date))
+			]);
 		}
 
-		wp_send_json($topic);
-		// wp_send_json_success();
-		// wp_send_json_error();
+		wp_send_json_error(['text' => 'Error during upload the topic']);
+	}
+
+	public static function get_curated_experiences()
+	{
+		check_ajax_referer('curated-experiences', 'security');
+
+		$params = lsc_clean($_POST);
+
+		$items = [];
+		$server = new LSC_Server();
+		$response = $server->get_curated_experiences($params['server_id'], $params['org_unit']);
+
+		if ($response) {
+			$items = $response;
+		}
+
+		wp_send_json($items);
+	}
+
+	public static function delete_curated_experience()
+	{
+		check_ajax_referer('curated-experiences', 'security');
+
+		$params = lsc_clean($_POST);
+
+		$server = new LSC_Server();
+		$response = $server->delete_curated_experience($params['server_id'], $params['item']);
+
+		if ($response) {
+			wp_send_json_success();
+		}
+
+		wp_send_json_error();
+	}
+
+	public static function upload_curated_experience()
+	{
+		check_ajax_referer('curated-experiences', 'security');
+
+		$params = lsc_clean($_POST);
+		$server_id = $params['server_id'];
+
+		$form_data = [
+			'name' => $params['name'],
+			'description' => $params['description'],
+			'file' => !empty($_FILES) ? $_FILES['templateFile'] : []
+		];
+
+		$server = new LSC_Server();
+		$result = $server->upload_curated_experience($server_id, $form_data);
+
+		if ($result) {
+			if ($result['errorCode']) {
+				if ($result['message']) {
+					wp_send_json_error($result['message']);
+				} else if (!empty($result['details'])) {
+					wp_send_json_error($result['details']);
+				}
+			}
+
+			wp_send_json_success($result['message']);
+		}
+
+		wp_send_json_error('Error during upload Curated Experiences');
 	}
 }

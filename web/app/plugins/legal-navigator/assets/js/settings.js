@@ -45,6 +45,7 @@
 
     $('#import-data').click(function () {
       importDialog.dialog('open');
+      return false;
     });
 
     function import_data() {

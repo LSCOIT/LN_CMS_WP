@@ -47,10 +47,6 @@ class LSC
         $this->define_constants();
         $this->includes();
         $this->init_hooks();
-
-        new LSC_Resources();
-        new LSC_Options();
-        new LSC_Topics();
     }
 
     /**
@@ -75,7 +71,7 @@ class LSC
 
 
         if ($this->is_request('admin')) {
-            // new LSC_Admin();
+            new LSC_Curated_Experiences();
         }
     }
 
@@ -88,6 +84,9 @@ class LSC
          * Core classes.
          */
         new LSC_Setup();
+        new LSC_Resources();
+        new LSC_Options();
+        new LSC_Topics();
 
         include_once LSC_ABSPATH . 'includes/lsc-core-functions.php';
     }

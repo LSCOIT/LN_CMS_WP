@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f23073d449d2b9487ef84988ae7a69e7",
+    "content-hash": "80178f2207eb2c2ce58261b2830d7dfa",
     "packages": [
         {
             "name": "composer/installers",
@@ -559,6 +559,24 @@
             "type": "wordpress-plugin"
         },
         {
+            "name": "wpackagist-plugin/acf-extended",
+            "version": "0.8.7",
+            "source": {
+                "type": "svn",
+                "url": "https://plugins.svn.wordpress.org/acf-extended/",
+                "reference": "tags/0.8.7"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://downloads.wordpress.org/plugin/acf-extended.0.8.7.zip"
+            },
+            "require": {
+                "composer/installers": "~1.0"
+            },
+            "type": "wordpress-plugin",
+            "homepage": "https://wordpress.org/plugins/acf-extended/"
+        },
+        {
             "name": "wpackagist-plugin/cyrlitera",
             "version": "1.1.1",
             "source": {
@@ -593,6 +611,24 @@
             },
             "type": "wordpress-plugin",
             "homepage": "https://wordpress.org/plugins/svg-support/"
+        },
+        {
+            "name": "wpackagist-plugin/user-role-editor",
+            "version": "4.56",
+            "source": {
+                "type": "svn",
+                "url": "https://plugins.svn.wordpress.org/user-role-editor/",
+                "reference": "tags/4.56"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://downloads.wordpress.org/plugin/user-role-editor.4.56.zip"
+            },
+            "require": {
+                "composer/installers": "~1.0"
+            },
+            "type": "wordpress-plugin",
+            "homepage": "https://wordpress.org/plugins/user-role-editor/"
         },
         {
             "name": "wpackagist-plugin/user-switching",

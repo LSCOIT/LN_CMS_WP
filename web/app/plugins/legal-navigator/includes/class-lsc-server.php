@@ -10,15 +10,7 @@ class LSC_Server
 {
   function resource_request($server_id, $action, $type, $data = [])
   {
-    /** @var array */
-    $servers = get_field('connections', 'option');
-
-    if (!$servers) {
-      return false;
-    }
-
-    $key = array_search($server_id, array_column($servers, 'connection_dir_id'));
-    $server = $servers[$key];
+    $server = $this->get_server_by_id($server_id);
 
     if (!$server) {
       return false;
@@ -29,7 +21,6 @@ class LSC_Server
     if (!$auth_token) {
       return false;
     }
-    var_error_log($auth_token);
 
     $url = "{$server['connection_url']}api/topics-resources/{$type}";
 
@@ -42,29 +33,30 @@ class LSC_Server
         break;
     }
 
-    $body = json_encode([$data]);
-    var_error_log($body);
-
     $params = [
-      // 'sslverify' => true,
-      'body' => $body,
-      /* 'headers'  => [
-        'Authorization' => $auth_token['token_type'] . ' ' . $auth_token['access_token']
-      ], */
+      'sslverify' => true,
+      'body' => json_encode($data),
+      'headers'  => [
+        'Authorization' => $auth_token['token_type'] . ' ' . $auth_token['access_token'],
+        'Content-Type' => 'application/json',
+      ],
     ];
 
     $response = wp_remote_post($url, $params);
 
-    var_error_log($response);
-
     if (is_wp_error($response)) {
       return false;
     } elseif (wp_remote_retrieve_response_code($response) === 200) {
-      var_error_log($response);
       $response_body = wp_remote_retrieve_body($response);
-      $json = json_decode($response_body, true);
-      return $json;
+      $resource_array = json_decode($response_body, true);
+      if (!empty($resource_array)) {
+        return array_shift($resource_array);
+      } else {
+        var_error_log($resource_array);
+        return false;
+      }
     } else {
+      var_error_log($response);
       return false;
     }
   }
@@ -109,6 +101,25 @@ class LSC_Server
     }
   }
 
+  private function get_server_by_id($server_id)
+  {
+    /** @var array */
+    $servers = get_field('connections', 'option');
+
+    if (!$servers) {
+      return false;
+    }
+
+    $key = array_search($server_id, array_column($servers, 'connection_dir_id'));
+    $server = $servers[$key];
+
+    if (!$server) {
+      return false;
+    }
+
+    return $server;
+  }
+
   function import_data()
   {
     $connection_url = get_field('standard_url', 'option');
@@ -119,13 +130,12 @@ class LSC_Server
       $organizational_units = get_organizational_unit();
 
       foreach (array_keys($organizational_units) as $organizational_unit) {
-        $topics_request_url = $connection_url . 'api/topics-resources/topics';
-
         $query_params = [
           'state' => $organizational_unit
         ];
 
-        $response = wp_remote_get(add_query_arg($query_params, $topics_request_url), $default_params);
+        $topics_request_url = add_query_arg($query_params, $connection_url . 'api/topics-resources/topics');
+        $response = wp_remote_get($topics_request_url, $default_params);
 
         if (is_wp_error($response)) {
           $result[] = $response->get_error_message();
@@ -139,14 +149,13 @@ class LSC_Server
               if ($topic) {
                 $this->save_topic($topic);
 
-                $resources_request_url = $connection_url . 'api/topics-resources/resources';
-
                 $query_params = [
                   'state' => $organizational_unit,
-                  'topicName' => $topic['name']
+                  'topicName' => urlencode($topic['name'])
                 ];
 
-                $response = wp_remote_get(add_query_arg($query_params, $resources_request_url), $default_params);
+                $resources_request_url = add_query_arg($query_params, $connection_url . 'api/topics-resources/resources');
+                $response = wp_remote_get($resources_request_url, $default_params);
 
                 if (is_wp_error($response)) {
                   $result[] = $response->get_error_message();
@@ -245,7 +254,7 @@ class LSC_Server
       update_term_meta($topic_id, '_modified_time', date('Y-m-d H:i:s', date('U', strtotime($topic['modifiedTimeStamp']))));
       update_term_meta($topic_id, 'display', $topic['display'] === 'Yes' ? 1 : 0);
       update_term_meta($topic_id, 'topic_ranking', $topic['ranking'] ?: 1);
-      update_term_meta($topic_id, 'topic_organizational_unit', $topic['organizationalUnit']);
+      update_term_meta($topic_id, 'topic_organizational_unit', strtoupper($topic['organizationalUnit']));
       update_term_meta($topic_id, 'keywords', $topic['keywords']);
 
       if ($topic['icon']) {
@@ -341,7 +350,7 @@ class LSC_Server
 
     $content = ' ';
 
-    if ($resource['overview']) {
+    if (!empty($resource['overview'])) {
       $content = '<p>' . $resource['overview'] . '</p>';
     }
 
@@ -373,11 +382,36 @@ class LSC_Server
       'meta_input'     => [
         '_resource_id' => $resource['id'],
         'resource_type' => $resource['resourceType'],
-        'organizational_unit' => $resource['organizationalUnit'],
+        'organizational_unit' => strtoupper($resource['organizationalUnit']),
         'resource_url' => $resource['url'] ?: '',
-        '_modified_by' => $modified_by
+        '_modified_by' => $modified_by,
+        'resource_display' => $resource['display'] === 'Yes' ? 1 : 0
       ],
     );
+
+    if ('Organizations' === $resource['resourceType']) {
+      if (!empty($resource['address'])) {
+        $resource_data['meta_input']['resource_address'] = $resource['address'];
+      }
+      if (!empty($resource['telephone'])) {
+        $resource_data['meta_input']['resource_telephone'] = $resource['telephone'];
+      }
+      if (!empty($resource['specialties'])) {
+        $resource_data['meta_input']['resource_specialties'] = $resource['specialties'];
+      }
+      if (!empty($resource['qualifications'])) {
+        $resource_data['meta_input']['resource_qualifications'] = $resource['qualifications'];
+      }
+      if (!empty($resource['businessHours'])) {
+        $resource_data['meta_input']['resource_business_hours'] = $resource['businessHours'];
+      }
+      if (!empty($resource['resourceCategory'])) {
+        $resource_data['meta_input']['resource_category'] = $resource['resourceCategory'];
+      }
+      if (!empty($resource['eligibilityInformation'])) {
+        $resource_data['meta_input']['resource_eligibility_information'] = $resource['eligibilityInformation'];
+      }
+    }
 
     if ($user = get_user_by('slug', $resource['createdBy'])) {
       $resource_data['post_author'] = $user->ID;
@@ -501,5 +535,165 @@ class LSC_Server
     }
 
     return $locations;
+  }
+
+  function get_curated_experiences($server_id, $unit = null)
+  {
+    $server = $this->get_server_by_id($server_id);
+
+    if (!$server) {
+      return false;
+    }
+
+    $auth_token = $this->get_auth_token($server);
+
+    if (!$auth_token) {
+      return false;
+    }
+
+    $url = "{$server['connection_url']}api/curated-experiences";
+
+    $params = [
+      'sslverify' => true,
+      'headers'  => [
+        'Authorization' => $auth_token['token_type'] . ' ' . $auth_token['access_token'],
+        'Content-Type' => 'application/json',
+      ],
+    ];
+
+    $query_params = [];
+
+    if ($unit) {
+      $query_params['location'] = $unit;
+    }
+
+    $response = wp_remote_get(add_query_arg($query_params, $url), $params);
+
+    if (is_wp_error($response)) {
+      return false;
+    } elseif (wp_remote_retrieve_response_code($response) === 200) {
+      $response_body = wp_remote_retrieve_body($response);
+      $response_array = json_decode($response_body, true);
+      return $response_array;
+    } else {
+      var_error_log($response);
+      return false;
+    }
+  }
+
+  function delete_curated_experience($server_id, $ce)
+  {
+    $server = $this->get_server_by_id($server_id);
+
+    if (!$server) {
+      return false;
+    }
+
+    $auth_token = $this->get_auth_token($server);
+
+    if (!$auth_token) {
+      return false;
+    }
+
+    $url = "{$server['connection_url']}api/curated-experiences/{$ce['id']}/{$ce['title']}";
+
+    $params = [
+      'sslverify' => true,
+      'headers'  => [
+        'Authorization' => $auth_token['token_type'] . ' ' . $auth_token['access_token'],
+        'Content-Type' => 'application/json',
+      ],
+      'method' => 'DELETE'
+    ];
+
+    $response = wp_remote_request($url, $params);
+
+    if (is_wp_error($response)) {
+      return false;
+    } elseif (wp_remote_retrieve_response_code($response) === 200) {
+      return true;
+    } else {
+      var_error_log($response);
+      return false;
+    }
+  }
+
+  function upload_curated_experience($server_id, $data)
+  {
+    $server = $this->get_server_by_id($server_id);
+
+    if (!$server) {
+      return false;
+    }
+
+    $auth_token = $this->get_auth_token($server);
+
+    if (!$auth_token) {
+      return false;
+    }
+
+    $url = "{$server['connection_url']}api/admin/curated-experience";
+
+    $local_file = !empty($data['file']) ? $data['file']['tmp_name'] : '';
+
+    $post_fields = array(
+      'name' => $data['name'],
+      'description' => $data['description']
+    );
+
+    $boundary = wp_generate_password(24);
+    $headers  = array(
+      'Authorization' => $auth_token['token_type'] . ' ' . $auth_token['access_token'],
+      'Content-Type' => 'multipart/form-data; boundary=' . $boundary,
+    );
+
+    $payload = '';
+
+    // First, add the standard POST fields:
+    foreach ($post_fields as $name => $value) {
+      $payload .= '--' . $boundary;
+      $payload .= "\r\n";
+      $payload .= 'Content-Disposition: form-data; name="' . $name .
+        '"' . "\r\n\r\n";
+      $payload .= $value;
+      $payload .= "\r\n";
+    }
+
+    // Upload the file
+    if ($local_file) {
+      $payload .= '--' . $boundary;
+      $payload .= "\r\n";
+      $payload .= 'Content-Disposition: form-data; name="templateFile"; filename="' . $data['file']['name'] . '"' . "\r\n";
+      $payload .= 'Content-Type: "' . $data['file']['type'] . '"' . "\r\n";
+      $payload .= "\r\n";
+      $payload .= file_get_contents($local_file);
+      $payload .= "\r\n";
+    }
+
+    $payload .= '--' . $boundary . '--';
+
+    $response = wp_remote_post(
+      $url,
+      array(
+        'sslverify' => true,
+        'headers'    => $headers,
+        'body'       => $payload,
+      )
+    );
+
+    if (is_wp_error($response)) {
+      return false;
+    } elseif (wp_remote_retrieve_response_code($response) === 200) {
+      $response_body = wp_remote_retrieve_body($response);
+      $response_array = json_decode($response_body, true);
+      return $response_array;
+    } elseif (wp_remote_retrieve_response_code($response) === 400) {
+      $response_body = wp_remote_retrieve_body($response);
+      $response_array = json_decode($response_body, true);
+      return $response_array;
+    } else {
+      var_error_log($response);
+      return false;
+    }
   }
 }

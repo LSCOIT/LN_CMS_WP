@@ -70,11 +70,10 @@ function get_resource_types()
 {
   return [
     'Organizations',
-    'Related Links',
+    'Related Readings',
     'Articles',
     'Videos',
     'Forms',
-    'AdditionalReadings & QuickLinks'
   ];
 }
 
