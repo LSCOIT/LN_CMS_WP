@@ -153,7 +153,7 @@ class LSC_Topics
           'label' => 'Display',
           'name' => 'display',
           'type' => 'true_false',
-          'acfe_permissions' => ['administrator', 'editor'],
+          'acfe_permissions' => ['administrator', 'state_admin', 'editor'],
           'ui' => 1,
         ),
       ),
@@ -253,7 +253,7 @@ class LSC_Topics
     foreach ($servers as $server) {
       $server_id = $server['connection_dir_id'];
       $user = wp_get_current_user();
-      if (current_user_can('administrator') || array_intersect($user->roles, $server['connection_allowed_for'])) {
+      if (current_user_can('manage_options') || array_intersect($user->roles, $server['connection_allowed_for'])) {
         $table[] = [
           'value' => $server_id,
           'title' => $server['connection_name'],

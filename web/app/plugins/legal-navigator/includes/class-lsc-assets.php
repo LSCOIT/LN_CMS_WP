@@ -69,6 +69,7 @@ class LSC_Assets
 		wp_register_script('lsc-topic', lsc_asset_path('js/topic.js'), array('jquery'), LSC_VERSION);
 		wp_register_script('lsc-curated-experiences', lsc_asset_path('js/curated-experiences.js'), array('jquery'), LSC_VERSION);
 		wp_register_script('datatables', '//cdn.datatables.net/v/dt/jqc-1.12.4/dt-1.10.21/r-2.2.5/datatables.min.js', array('jquery'), null);
+		wp_register_script('users',lsc_asset_path('js/users.js'), array('jquery'), LSC_VERSION);
 
 		if ('settings_page_integration-settings' == $screen_id) {
 			wp_enqueue_script('lsc-settings');
@@ -116,6 +117,10 @@ class LSC_Assets
 			);
 
 			wp_localize_script('lsc-curated-experiences', 'lsc_ce_params', $params);
+		}
+
+		if ('user' === $screen_id) {
+			wp_enqueue_script('users');
 		}
 	}
 }

@@ -87,6 +87,7 @@ class LSC
         new LSC_Resources();
         new LSC_Options();
         new LSC_Topics();
+        new LSC_Users();
 
         include_once LSC_ABSPATH . 'includes/lsc-core-functions.php';
     }

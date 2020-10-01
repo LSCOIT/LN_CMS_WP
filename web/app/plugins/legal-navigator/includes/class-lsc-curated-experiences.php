@@ -26,7 +26,7 @@ class LSC_Curated_Experiences
     foreach ($servers as $server) {
       $server_id = $server['connection_dir_id'];
       $user = wp_get_current_user();
-      if (current_user_can('administrator') || array_intersect($user->roles, $server['connection_allowed_for'])) {
+      if (current_user_can('manage_options') || array_intersect($user->roles, $server['connection_allowed_for'])) {
         $table[] = [
           'value' => $server_id,
           'title' => $server['connection_name'],
