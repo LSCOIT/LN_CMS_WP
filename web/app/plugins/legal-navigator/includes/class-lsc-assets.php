@@ -28,7 +28,7 @@ class LSC_Assets
 
 		// Register admin styles
 		wp_register_style('lsc-settings', lsc_asset_path('css/settings.css'), array('wp-jquery-ui-dialog'), LSC_VERSION);
-		wp_register_style('lsc-resource', lsc_asset_path('css/resource.css'), null, LSC_VERSION);
+		wp_register_style('lsc-post', lsc_asset_path('css/post.css'), null, LSC_VERSION);
 		wp_register_style('lsc-topic', lsc_asset_path('css/topic.css'), null, LSC_VERSION);
 		wp_register_style('lsc-curated-experiences', lsc_asset_path('css/curated-experiences.css'), null, LSC_VERSION);
 		wp_register_style('datatables', '//cdn.datatables.net/v/dt/jqc-1.12.4/dt-1.10.21/r-2.2.5/datatables.min.css', ['lsc-curated-experiences'], null);
@@ -39,8 +39,8 @@ class LSC_Assets
 			wp_enqueue_style('lsc-settings');
 		}
 
-		if ('post' === $screen_id) {
-			wp_enqueue_style('lsc-resource');
+		if ('post' === $screen_id || 'page' === $screen_id) {
+			wp_enqueue_style('lsc-post');
 		}
 
 		if ('edit-category' === $screen_id) {
@@ -65,7 +65,7 @@ class LSC_Assets
 
 		// Register scripts
 		wp_register_script('lsc-settings', lsc_asset_path('js/settings.js'), array('jquery', 'jquery-ui-core', 'jquery-ui-dialog', 'jquery-ui-progressbar'), LSC_VERSION);
-		wp_register_script('lsc-resource', lsc_asset_path('js/resource.js'), array('jquery'), LSC_VERSION);
+		wp_register_script('lsc-post', lsc_asset_path('js/post.js'), array('jquery'), LSC_VERSION);
 		wp_register_script('lsc-topic', lsc_asset_path('js/topic.js'), array('jquery'), LSC_VERSION);
 		wp_register_script('lsc-curated-experiences', lsc_asset_path('js/curated-experiences.js'), array('jquery'), LSC_VERSION);
 		wp_register_script('datatables', '//cdn.datatables.net/v/dt/jqc-1.12.4/dt-1.10.21/r-2.2.5/datatables.min.js', array('jquery'), null);
@@ -83,16 +83,16 @@ class LSC_Assets
 			wp_localize_script('lsc-settings', 'lsc_import_params', $params);
 		}
 
-		if ('post' === $screen_id) {
-			wp_enqueue_script('lsc-resource');
+		if ('post' === $screen_id || 'page' === $screen_id) {
+			wp_enqueue_script('lsc-post');
 
 			$params = array(
 				'ajax_url'     => admin_url('admin-ajax.php'),
-				'upload_resource_nonce' => wp_create_nonce('upload-resource'),
+				'upload_post_nonce' => wp_create_nonce('upload-post'),
 				'post_id' => $post->ID
 			);
 
-			wp_localize_script('lsc-resource', 'lsc_resource_params', $params);
+			wp_localize_script('lsc-post', 'lsc_post_params', $params);
 		}
 
 		if ('edit-category' === $screen_id && !empty($_REQUEST['tag_ID'])) {

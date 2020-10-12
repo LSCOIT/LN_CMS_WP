@@ -1,4 +1,4 @@
-.upload-resource-table {
+.upload-post-table {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 10px;
@@ -20,18 +20,18 @@
   color: red;
 }
 
-table.upload-resource-table,
-.upload-resource-table th,
-.upload-resource-table td {
+table.upload-post-table,
+.upload-post-table th,
+.upload-post-table td {
   border: 1px solid black;
 }
 
-.upload-resource-table th,
-.upload-resource-table td {
+.upload-post-table th,
+.upload-post-table td {
   padding: 4px;
   text-align: center;
 }
 
-.upload-resource-table td input[type='radio'] {
+.upload-post-table td input[type='radio'] {
   margin-right: 0;
 }

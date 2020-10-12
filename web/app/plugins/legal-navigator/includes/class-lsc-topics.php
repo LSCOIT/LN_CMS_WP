@@ -13,7 +13,7 @@ class LSC_Topics
   {
     add_action('admin_init', [$this, 'change_labels']);
     add_action('admin_menu', [$this, 'change_cat_label']);
-    add_action('acf/init', [$this, 'add_fields']);
+    add_filter('acf/load_field/name=topic_organizational_unit', 'get_organizational_unit_field');
     add_filter('category_edit_form_fields', [$this, 'cat_description'], 9);
     add_action('category_edit_form_fields', [$this, 'server_sync'], 11);
     add_action('admin_head', [$this, 'remove_default_category_description']);
@@ -62,111 +62,6 @@ class LSC_Topics
   {
     global $submenu;
     $submenu['edit.php'][15][0] = 'Topics'; // Rename categories to Authors
-  }
-
-  function add_fields()
-  {
-    acf_add_local_field_group(array(
-      'key' => 'group_topic_fields',
-      'title' => 'Topic fields',
-      'fields' => array(
-        array(
-          'key' => 'field_topic_organizational_unit',
-          'label' => 'Organizational Unit',
-          'name' => 'topic_organizational_unit',
-          'type' => 'select',
-          'required' => 1,
-          'choices' => $this->get_organizational_unit(),
-        ),
-        array(
-          'key' => 'field_topic_locations',
-          'label' => 'Locations',
-          'name' => 'topic_locations',
-          'type' => 'repeater',
-          'min' => 1,
-          'required' => 1,
-          'layout' => 'table',
-          'sub_fields' => array(
-            array(
-              'key' => 'field_topic_state',
-              'label' => 'State',
-              'name' => 'topic_state',
-              'type' => 'select',
-              'allow_null' => 1,
-              'choices' => $this->get_organizational_unit(),
-              'wrapper' => [
-                'width' => 28
-              ]
-            ),
-            array(
-              'key' => 'field_topic_county',
-              'label' => 'County',
-              'name' => 'topic_county',
-              'type' => 'text',
-              'wrapper' => [
-                'width' => 28
-              ]
-            ),
-            array(
-              'key' => 'field_topic_city',
-              'label' => 'City',
-              'name' => 'topic_city',
-              'type' => 'text',
-              'wrapper' => [
-                'width' => 28
-              ]
-            ),
-            array(
-              'key' => 'field_topic_zip_code',
-              'label' => 'Zip Code',
-              'name' => 'topic_zip_code',
-              'type' => 'number',
-              'wrapper' => [
-                'width' => 16
-              ]
-            ),
-          ),
-        ),
-        array(
-          'key' => 'field_keywords',
-          'label' => 'Keywords',
-          'name' => 'keywords',
-          'type' => 'text',
-        ),
-        array(
-          'key' => 'field_icon',
-          'label' => 'Icon',
-          'name' => 'icon',
-          'type' => 'image',
-          'return_format' => 'url',
-        ),
-        array(
-          'key' => 'field_topic_ranking',
-          'label' => 'Ranking',
-          'name' => 'topic_ranking',
-          'type' => 'number',
-          'default_value' => 1,
-          'required' => 1,
-        ),
-        array(
-          'key' => 'field_display',
-          'label' => 'Display',
-          'name' => 'display',
-          'type' => 'true_false',
-          'acfe_permissions' => ['administrator', 'state_admin', 'editor'],
-          'ui' => 1,
-        ),
-      ),
-      'location' => array(
-        array(
-          array(
-            'param' => 'taxonomy',
-            'operator' => '==',
-            'value' => 'category',
-          ),
-        ),
-      ),
-    ));
   }
 
   private function get_organizational_unit()
@@ -445,7 +340,7 @@ class LSC_Topics
     $server = new LSC_Server();
 
     foreach ($servers as $serv) {
-      $server->resource_request($serv['connection_dir_id'], 'insert', 'topics', [$topic]);
+      $server->resource_request($serv['connection_dir_id'], 'topics-resources/topics/documents/upsert', [$topic]);
     }
   }
 }

@@ -109,13 +109,14 @@ function get_topic_id_by_uid($topic_uid)
   return null;
 }
 
-function get_resource_id_by_uid($resource_uid)
+function get_post_id_by_uid($resource_uid)
 {
   $resources = get_posts([
     'numberposts' => 1,
+    'post_type' => 'any',
     'meta_query' => [
       [
-        'key' => '_resource_id',
+        'key' => '_remote_id',
         'value' => $resource_uid,
       ]
     ]
@@ -162,4 +163,21 @@ function var_error_log($args = array())
   $contents = ob_get_contents();
   ob_end_clean();
   error_log($contents);
+}
+
+
+function get_organizational_unit_field($field)
+{
+  $units = get_organizational_unit();
+  $field['choices'] = $units;
+
+  if (get_current_user_id() && !current_user_can('manage_options')) {
+    $current_user_id = get_current_user_id();
+    $org_unit = get_user_meta($current_user_id, 'user_organizational_unit', true);
+    $filtered_units = [$org_unit => $units[$org_unit]];
+
+    $field['choices'] = $filtered_units;
+  }
+
+  return $field;
 }

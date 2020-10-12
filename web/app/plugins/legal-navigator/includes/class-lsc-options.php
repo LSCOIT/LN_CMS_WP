@@ -10,117 +10,8 @@ class LSC_Options
 {
     public function __construct()
     {
-        add_action('acf/init', [$this, 'add_options_page']);
-        add_action('acf/init', [$this, 'add_fields']);
+        add_filter('acf/load_field/name=connection_allowed_for', [$this, 'get_roles']);
         add_action('load-settings_page_integration-settings', [$this, 'import_block']);
-    }
-
-    public function add_options_page()
-    {
-        acf_add_options_sub_page(array(
-            'page_title' => __('Integration Settings', 'legal-navigator'),
-            'menu_title' => __('Integration Settings', 'legal-navigator'),
-            'parent_slug' => 'options-general.php',
-            'menu_slug' => 'integration-settings',
-            'capability' => 'manage_options'
-        ));
-    }
-
-    public function add_fields()
-    {
-        acf_add_local_field_group(array(
-            'key' => 'group_standard_connection',
-            'title' => 'Standard Connection',
-            'fields' => array(
-                array(
-                    'key' => 'field_standard_url',
-                    'label' => 'Standard Url',
-                    'name' => 'standard_url',
-                    'type' => 'url',
-                    'required' => 1,
-                ),
-                array(
-                    'key' => 'field_connections',
-                    'label' => 'Connections',
-                    'name' => 'connections',
-                    'type' => 'repeater',
-                    'layout' => 'block',
-                    'sub_fields' => array(
-                        array(
-                            'key' => 'field_connection_name',
-                            'label' => 'Connection Name',
-                            'name' => 'connection_name',
-                            'type' => 'text',
-                            'required' => 1,
-                            'wrapper' => array(
-                                'width' => 33,
-                            ),
-                        ),
-                        array(
-                            'key' => 'field_connection_url',
-                            'label' => 'Url',
-                            'name' => 'connection_url',
-                            'type' => 'url',
-                            'required' => 1,
-                            'wrapper' => array(
-                                'width' => 34,
-                            ),
-                        ),
-                        array(
-                            'key' => 'field_connection_allowed_for',
-                            'label' => 'Allowed for',
-                            'name' => 'connection_allowed_for',
-                            'type' => 'checkbox',
-                            'required' => 1,
-                            'choices' => $this->get_roles(),
-                            'wrapper' => [
-                                'width' => 33
-                            ]
-                        ),
-                        array(
-                            'key' => 'field_connection_dir_id',
-                            'label' => 'Directory (tenant) ID',
-                            'name' => 'connection_dir_id',
-                            'type' => 'text',
-                            'required' => 1,
-                            'wrapper' => array(
-                                'width' => 33,
-                            ),
-                        ),
-                        array(
-                            'key' => 'field_connection_app_id',
-                            'label' => 'Application (client) ID',
-                            'name' => 'connection_app_id',
-                            'type' => 'text',
-                            'required' => 1,
-                            'wrapper' => array(
-                                'width' => 34,
-                            ),
-                        ),
-                        array(
-                            'key' => 'field_connection_client_secret_id',
-                            'label' => 'Client Secret ID',
-                            'name' => 'connection_client_secret_id',
-                            'type' => 'text',
-                            'required' => 1,
-                            'wrapper' => array(
-                                'width' => 33,
-                            ),
-                        ),
-                    ),
-                ),
-            ),
-            'location' => array(
-                array(
-                    array(
-                        'param' => 'options_page',
-                        'operator' => '==',
-                        'value' => 'integration-settings',
-                    ),
-                ),
-            ),
-            'style' => 'seamless',
-        ));
     }
 
     public function import_block()
@@ -150,7 +41,7 @@ class LSC_Options
 <?php
     }
 
-    public function get_roles()
+    function get_roles($field)
     {
         global $wp_roles;
         $roles = $wp_roles->roles;
@@ -160,6 +51,8 @@ class LSC_Options
             $roles_array[$key] = $value['name'];
         }
 
-        return $roles_array;
+        $field['choices'] = $roles_array;
+
+        return $field;
     }
 }

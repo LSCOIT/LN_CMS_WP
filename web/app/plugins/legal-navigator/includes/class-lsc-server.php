@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
 
 class LSC_Server
 {
-  function resource_request($server_id, $action, $type, $data = [])
+  function resource_request($server_id, $path, $data = [])
   {
     $server = $this->get_server_by_id($server_id);
 
@@ -22,16 +22,7 @@ class LSC_Server
       return false;
     }
 
-    $url = "{$server['connection_url']}api/topics-resources/{$type}";
-
-    switch ($action) {
-      case 'insert':
-        $url .= '/documents/upsert';
-        break;
-      case 'delete':
-        $url .= '/delete';
-        break;
-    }
+    $url = "{$server['connection_url']}api/{$path}";
 
     $params = [
       'sslverify' => true,
@@ -124,7 +115,11 @@ class LSC_Server
   {
     $connection_url = get_field('standard_url', 'option');
     $result = [];
-    $default_params = ['sslverify' => true];
+    $default_params = ['sslverify' => true, 'timeout' => 60];
+
+    $was_suspended = wp_suspend_cache_addition();
+
+    wp_suspend_cache_addition(true);
 
     if ($connection_url) {
       $organizational_units = get_organizational_unit();
@@ -146,7 +141,7 @@ class LSC_Server
           if ($topics) {
             foreach ($topics as $topic) {
 
-              if ($topic) {
+              if (!empty($topic)) {
                 $this->save_topic($topic);
 
                 $query_params = [
@@ -163,7 +158,7 @@ class LSC_Server
                   $json_resources = wp_remote_retrieve_body($response);
                   $resources = json_decode($json_resources, true);
 
-                  if ($resources) {
+                  if (!empty($resources)) {
                     foreach ($resources as $resource) {
                       if ($resource) {
                         $this->save_resource($resource);
@@ -179,16 +174,255 @@ class LSC_Server
         } else {
           $result[] = $topics_request_url . ' - ' . wp_remote_retrieve_response_code($response);
         }
+
+        $page_params = [
+          'sslverify' => true,
+          'body' => json_encode($query_params),
+          'headers'  => [
+            'Content-Type' => 'application/json',
+          ],
+          'timeout' => 60
+        ];
+        $pages_request_url = $connection_url . 'api/static-resources';
+        $response = wp_remote_post($pages_request_url, $page_params);
+
+        if (is_wp_error($response)) {
+          $result[] = $response->get_error_message();
+        } elseif (wp_remote_retrieve_response_code($response) === 200) {
+          $pages_json = wp_remote_retrieve_body($response);
+          $pages = json_decode($pages_json, true);
+
+          if ($pages) {
+            foreach ($pages as $page) {
+              if (!empty($page)) {
+                switch ($page['name']) {
+                  case 'Navigation':
+                  case 'GuidedAssistantPrivacyPage':
+                    break;
+                    break;
+                  default:
+                    $this->save_page($page);
+                }
+              }
+            }
+          }
+        } else {
+          $result[] = $pages_request_url . ' - ' . wp_remote_retrieve_response_code($response);
+        }
       }
     }
+
+    wp_suspend_cache_addition($was_suspended);
 
     return $result;
   }
 
+  function save_page($page)
+  {
+    $page_data = array(
+      'post_title'    => wp_strip_all_tags($page['name']),
+      'post_status'   => 'publish',
+      'post_type'      => 'page',
+      'meta_input'     => [
+        '_remote_id' => $page['id'],
+        '_modified_by' => get_current_user_id(),
+        'organizational_unit' => $page['organizationalUnit'],
+        'page_type' => $page['name']
+      ],
+    );
+
+    $page_id = get_post_id_by_uid($page['id']);
+
+    if ($page_id) {
+      $page_data['ID'] = $page_id;
+    }
+
+    $page_id = wp_insert_post($page_data);
+
+    $locations_rows = [];
+    foreach ($page['location'] as $location) {
+      $locations_rows[] = [
+        'zip_code' => $location['zipCode'],
+        'city' => $location['city'],
+        'county' => $location['county'],
+        'state' => $location['state'],
+      ];
+    }
+    update_field('locations', $locations_rows, $page_id);
+
+    switch ($page['name']) {
+      case 'HelpAndFAQPage':
+        update_field('help_and_faq_page_description', $page['description'], $page_id);
+        update_field('help_and_faq_page_image_source', $page['image']['source'], $page_id);
+        update_field('help_and_faq_page_image_alt', $page['image']['altText'], $page_id);
+        $faqs = [];
+        foreach ($page['faqs'] as $faq) {
+          $faqs[] = [
+            'question' => $faq['question'],
+            'answer' => $faq['answer'],
+          ];
+        }
+        update_field('help_and_faq_page_faqs', $faqs, $page_id);
+        break;
+      case 'PrivacyNoticePage':
+        update_field('privacy_notice_page_description', $page['description'], $page_id);
+        update_field('privacy_notice_page_image_source', $page['image']['source'], $page_id);
+        update_field('privacy_notice_page_image_alt', $page['image']['altText'], $page_id);
+        $details = [];
+        foreach ($page['details'] as $detail) {
+          $details[] = [
+            'title' => $detail['title'],
+            'description' => $detail['description'],
+          ];
+        }
+        update_field('privacy_notice_page_details', $details, $page_id);
+        break;
+      case 'PersonalizedActionPlanPage':
+        update_field('personalized_action_plan_page_description', $page['description'], $page_id);
+        $sponsors = [];
+        foreach ($page['sponsors'] as $sponsor) {
+          $sponsors[] = [
+            'image' => $this->image_upload_file($sponsor, false),
+          ];
+        }
+        update_field('personalized_action_plan_page_sponsors', $sponsors, $page_id);
+        break;
+      case 'HomePage':
+        // hero
+        update_field('home_page_hero_heading', $page['hero']['heading'], $page_id);
+        update_field('home_page_hero_description', $page['hero']['description']['text'], $page_id);
+        update_field('home_page_hero_text_with_link_url_text', $page['hero']['description']['textWithLink']['urlText'], $page_id);
+        update_field('home_page_hero_text_with_link_url', $page['hero']['description']['textWithLink']['url'], $page_id);
+        update_field('home_page_hero_image_source', $page['hero']['image']['source'], $page_id);
+        update_field('home_page_hero_image_alt', $page['hero']['image']['altText'], $page_id);
+
+        // guidedAssistantOverview
+        update_field('home_page_guided_assistant_overview_heading', $page['guidedAssistantOverview']['heading'], $page_id);
+        update_field('home_page_guided_assistant_overview_description', $page['guidedAssistantOverview']['description']['text'], $page_id);
+        update_field('home_page_guided_assistant_overview_text_with_link_url_text', $page['guidedAssistantOverview']['description']['textWithLink']['urlText'], $page_id);
+        update_field('home_page_guided_assistant_overview_text_with_link_url', $page['guidedAssistantOverview']['description']['textWithLink']['url'], $page_id);
+        $steps = [];
+        foreach ($page['guidedAssistantOverview']['description']['steps'] as $step) {
+          $steps[] = [
+            'description' => $step['description'],
+          ];
+        }
+        update_field('home_page_guided_assistant_overview_steps', $steps, $page_id);
+        update_field('home_page_guided_assistant_overview_button_text', $page['guidedAssistantOverview']['button']['buttonText'], $page_id);
+        update_field('home_page_guided_assistant_overview_button_alt_text', $page['guidedAssistantOverview']['button']['buttonAltText'], $page_id);
+        update_field('home_page_guided_assistant_overview_button_link', $page['guidedAssistantOverview']['button']['buttonLink'], $page_id);
+        update_field('home_page_guided_assistant_overview_image_source', $page['guidedAssistantOverview']['image']['source'], $page_id);
+        update_field('home_page_guided_assistant_overview_image_alt', $page['guidedAssistantOverview']['image']['altText'], $page_id);
+
+        // topicAndResources
+        update_field('home_page_topic_and_resources_heading', $page['topicAndResources']['heading'], $page_id);
+        update_field('home_page_topic_and_resources_button_text', $page['topicAndResources']['button']['buttonText'], $page_id);
+        update_field('home_page_topic_and_resources_button_alt_text', $page['topicAndResources']['button']['buttonAltText'], $page_id);
+        update_field('home_page_topic_and_resources_button_link', $page['topicAndResources']['button']['buttonLink'], $page_id);
+
+        // carousel
+        $slides = [];
+        foreach ($page['carousel']['slides'] as $slide) {
+          $slides[] = [
+            'quote' => $slide['quote'],
+            'author' => $slide['author'],
+            'location' => $slide['location'],
+            'image' => $this->image_upload_file($slide['image'], false),
+          ];
+        }
+        update_field('home_page_carousel', $slides, $page_id);
+
+        //sponsorOverview
+        update_field('home_page_sponsor_overview_heading', $page['sponsorOverview']['heading'], $page_id);
+        update_field('home_page_sponsor_overview_description', $page['sponsorOverview']['description'], $page_id);
+        $sponsors = [];
+        foreach ($page['sponsorOverview']['sponsors'] as $sponsor) {
+          $sponsors[] = [
+            'image' => $this->image_upload_file($sponsor, false),
+          ];
+        }
+        update_field('home_page_sponsor_overview_sponsors', $sponsors, $page_id);
+        update_field('home_page_sponsor_overview_button_text', $page['sponsorOverview']['button']['buttonText'], $page_id);
+        update_field('home_page_sponsor_overview_button_alt_text', $page['sponsorOverview']['button']['buttonAltText'], $page_id);
+        update_field('home_page_sponsor_overview_button_link', $page['sponsorOverview']['button']['buttonLink'], $page_id);
+
+        //privacy
+        update_field('home_page_privacy_heading', $page['privacy']['heading'], $page_id);
+        update_field('home_page_privacy_description', $page['privacy']['description'], $page_id);
+        update_field('home_page_privacy_button_text', $page['privacy']['button']['buttonText'], $page_id);
+        update_field('home_page_privacy_button_alt_text', $page['privacy']['button']['buttonAltText'], $page_id);
+        update_field('home_page_privacy_button_link', $page['privacy']['button']['buttonLink'], $page_id);
+        update_field('home_page_privacy_image_source', $page['privacy']['image']['source'], $page_id);
+        update_field('home_page_privacy_image_alt', $page['privacy']['image']['altText'], $page_id);
+
+        //helpText
+        update_field('home_page_help_text_beginning_text', $page['helpText']['beginningText'], $page_id);
+        update_field('home_page_help_text_phone_number', $page['helpText']['phoneNumber'], $page_id);
+        update_field('home_page_help_text_ending_text', $page['helpText']['endingText'], $page_id);
+        break;
+      case 'AboutPage':
+        update_field('about_page_image_source', $page['aboutImage']['source'], $page_id);
+        update_field('about_page_image_alt', $page['aboutImage']['altText'], $page_id);
+
+        //mission
+        update_field('about_page_mission_title', $page['mission']['title'], $page_id);
+        update_field('about_page_mission_description', $page['mission']['description'], $page_id);
+        $sponsors = [];
+        foreach ($page['mission']['sponsors'] as $sponsor) {
+          $sponsors[] = [
+            'image' => $this->image_upload_file($sponsor, false),
+          ];
+        }
+        update_field('about_page_mission_sponsors', $sponsors, $page_id);
+
+        //service
+        update_field('about_page_service_image', $this->image_upload_file($page['service']['image'], false), $page_id);
+        update_field('about_page_service_title', $page['service']['title'], $page_id);
+        update_field('about_page_service_description', $page['service']['description'], $page_id);
+        update_field('about_page_service_guided_assistant_button_text', $page['service']['guidedAssistantButton']['buttonText'], $page_id);
+        update_field('about_page_service_guided_assistant_button_alt_text', $page['service']['guidedAssistantButton']['buttonAltText'], $page_id);
+        update_field('about_page_service_guided_assistant_button_link', $page['service']['guidedAssistantButton']['buttonLink'], $page_id);
+        update_field('about_page_service_topics_and_resources_button_text', $page['service']['topicsAndResourcesButton']['buttonText'], $page_id);
+        update_field('about_page_service_topics_and_resources_button_alt_text', $page['service']['topicsAndResourcesButton']['buttonAltText'], $page_id);
+        update_field('about_page_service_topics_and_resources_button_link', $page['service']['topicsAndResourcesButton']['buttonLink'], $page_id);
+
+        //privacyPromise
+        update_field('about_page_privacy_promise_image', $this->image_upload_file($page['privacyPromise']['image'], false), $page_id);
+        update_field('about_page_privacy_promise_title', $page['privacyPromise']['title'], $page_id);
+        update_field('about_page_privacy_promise_description', $page['privacyPromise']['description'], $page_id);
+        update_field('about_page_privacy_promise_button_text', $page['privacyPromise']['privacyPromiseButton']['buttonText'], $page_id);
+        update_field('about_page_privacy_promise_button_alt_text', $page['privacyPromise']['privacyPromiseButton']['buttonAltText'], $page_id);
+        update_field('about_page_privacy_promise_button_link', $page['privacyPromise']['privacyPromiseButton']['buttonLink'], $page_id);
+
+        //contactUs
+        update_field('about_page_contact_us_title', $page['contactUs']['title'], $page_id);
+        update_field('about_page_contact_us_description', $page['contactUs']['description'], $page_id);
+        update_field('about_page_contact_us_email', $page['contactUs']['email'], $page_id);
+
+        //mediaInquiries
+        update_field('about_page_media_inquiries_title', $page['mediaInquiries']['title'], $page_id);
+        update_field('about_page_media_inquiries_description', $page['mediaInquiries']['description'], $page_id);
+        update_field('about_page_media_inquiries_email', $page['mediaInquiries']['email'], $page_id);
+
+        //inTheNews
+        update_field('about_page_in_the_news_title', $page['inTheNews']['title'], $page_id);
+        update_field('about_page_in_the_news_description', $page['inTheNews']['description'], $page_id);
+        $news = [];
+        foreach ($page['inTheNews']['news'] as $news_item) {
+          $news[] = [
+            'title' => $news_item['title'],
+            'description' => $news_item['description'],
+            'url' => $news_item['url'],
+            'image' => $this->image_upload_file($news_item['image'], false)
+          ];
+        }
+        update_field('about_page_in_the_news_news', $news, $page_id);
+        break;
+    }
+  }
+
   function save_topic($topic)
   {
-    $topic = lsc_clean($topic);
-
     $topic_id = get_topic_id_by_uid($topic['id']);
 
     if ($topic_id) {
@@ -270,8 +504,6 @@ class LSC_Server
         $diff = array_diff_assoc_recursive($this->transform_resource_locations($locations, 'topic'), $topic['location']);
 
         if (!empty($diff)) {
-          delete_field('topic_locations', "category_{$topic_id}");
-
           $locations_rows = [];
           foreach ($topic['location'] as $location) {
             $locations_rows[] = [
@@ -317,12 +549,10 @@ class LSC_Server
 
   function save_resource($resource)
   {
-    $resource = lsc_clean($resource);
-
     $modified_time = date('Y-m-d H:i:s', date('U', strtotime($resource['modifiedTimeStamp'])));
     $created_time = date('Y-m-d H:i:s', date('U', strtotime($resource['createdTimeStamp'])));
 
-    $resource_id = get_resource_id_by_uid($resource['id']);
+    $resource_id = get_post_id_by_uid($resource['id']);
 
     if ($resource_id) {
       $old_modified_time = get_post_field('post_modified', $resource_id);
@@ -380,7 +610,7 @@ class LSC_Server
       'post_type'      => 'post',
       'post_category'  => $topics_ids,
       'meta_input'     => [
-        '_resource_id' => $resource['id'],
+        '_remote_id' => $resource['id'],
         'resource_type' => $resource['resourceType'],
         'organizational_unit' => strtoupper($resource['organizationalUnit']),
         'resource_url' => $resource['url'] ?: '',
@@ -432,8 +662,6 @@ class LSC_Server
       $diff = array_diff_assoc_recursive($this->transform_resource_locations($locations, 'resource'), $resource['location']);
 
       if (!empty($diff)) {
-        delete_field('locations', $resource_id);
-
         $locations_rows = [];
         foreach ($resource['location'] as $location) {
           $locations_rows[] = [
@@ -482,23 +710,44 @@ class LSC_Server
     update_field('topics', $topics_rows, $resource_id);
   }
 
-  private function image_upload_file($file_url)
+  private function image_upload_file($file, $remote = true)
   {
+    if ($remote) {
+      $path_parts = pathinfo($file);
+      $filename = sanitize_title($path_parts['filename']);
+      $file_alt = $filename;
+    } else {
+      $filename = sanitize_title($file['altText']);
+      $file_alt = $file['altText'];
+    }
+
     global $wpdb;
-    $path_parts = pathinfo($file_url);
-    $filename = $path_parts['filename'];
     $file_id = $wpdb->get_var($wpdb->prepare("SELECT ID FROM $wpdb->posts WHERE post_title = %s AND post_type = 'attachment'", $filename));
 
     if ($file_id) {
       return $file_id;
     }
 
-    $tmp = download_url($file_url);
+    if ($remote) {
+      $tmp = download_url($file);
 
-    $file_array = [
-      'name'     => $path_parts['basename'],
-      'tmp_name' => $tmp
-    ];
+      $file_array = [
+        'name'     => $path_parts['basename'],
+        'tmp_name' => $tmp
+      ];
+    } else {
+      if (empty($file['source'])) {
+        return;
+      }
+
+      $tmp = wp_tempnam();
+      file_put_contents($tmp, base64_decode($file['source']));
+
+      $file_array = [
+        'name'     => $filename . '.jpg',
+        'tmp_name' => $tmp,
+      ];
+    }
 
     $id =  media_handle_sideload($file_array, 0);
     @unlink($tmp);
@@ -506,6 +755,8 @@ class LSC_Server
     if (is_wp_error($id)) {
       return false;
     }
+
+    update_post_meta($id, '_wp_attachment_image_alt', $file_alt);
 
     return $id;
   }

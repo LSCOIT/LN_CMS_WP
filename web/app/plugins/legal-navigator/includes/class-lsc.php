@@ -84,7 +84,7 @@ class LSC
          * Core classes.
          */
         new LSC_Setup();
-        new LSC_Resources();
+        new LSC_Post();
         new LSC_Options();
         new LSC_Topics();
         new LSC_Users();

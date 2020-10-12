@@ -7,43 +7,11 @@ class LSC_Users
 
   function __construct()
   {
-    add_action('acf/init', [$this, 'add_fields']);
     add_filter('manage_users_columns', [$this, 'additional_columns']);
     add_action('manage_users_custom_column', [$this, 'render_additional_columns'], 10, 3);
     add_filter('editable_roles', [$this, 'filter_roles']);
     add_action('pre_get_users', [$this, 'filter_users']);
-  }
-
-  function add_fields()
-  {
-    acf_add_local_field_group(array(
-      'key' => 'group_user_fields',
-      'title' => 'User organizational unit',
-      'fields' => array(
-        array(
-          'key' => 'field_user_organizational_unit',
-          'label' => 'Organizational Unit',
-          'name' => 'user_organizational_unit',
-          'type' => 'select',
-          'required' => 1,
-          'choices' => $this->get_organizational_unit(),
-        ),
-      ),
-      'location' => array(
-        array(
-          array(
-            'param' => 'user_form',
-            'operator' => '==',
-            'value' => 'edit',
-          ),
-          array(
-            'param' => 'user_role',
-            'operator' => '!=',
-            'value' => 'administrator',
-          ),
-        ),
-      )
-    ));
+    add_filter('acf/load_field/name=user_organizational_unit', 'get_organizational_unit_field');
   }
 
   function additional_columns($columns)
@@ -79,21 +47,6 @@ class LSC_Users
       default:
         return $val;
     }
-  }
-
-  private function get_organizational_unit()
-  {
-    $units = get_organizational_unit();
-
-    if (get_current_user_id() && !current_user_can('manage_options')) {
-      $current_user_id = get_current_user_id();
-      $org_unit = get_field('user_organizational_unit', "user_{$current_user_id}");
-      $filtered_units = [$org_unit => $units[$org_unit]];
-
-      return $filtered_units;
-    }
-
-    return $units;
   }
 
   function filter_roles($roles)

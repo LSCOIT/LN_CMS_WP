@@ -2,23 +2,25 @@
   'use strict';
 
   $(function () {
-    var button = $('#upload-resource');
+    var button = $('#upload-post');
     button.prop('disabled', true);
 
     $('input[name="server_id"]').click(function () {
       button.prop('disabled', false);
     });
 
-    button.on('click', function () {
+    button.on('click', function (event) {
+      event.preventDefault();
+
       const server_id = $('input[name="server_id"]:checked').val();
       $.ajax({
-        url: lsc_resource_params.ajax_url,
+        url: lsc_post_params.ajax_url,
         type: 'post',
         data: {
           server_id: server_id,
-          security: lsc_resource_params.upload_resource_nonce,
-          action: 'lsc_upload_resource',
-          post_id: lsc_resource_params.post_id,
+          security: lsc_post_params.upload_post_nonce,
+          action: 'lsc_upload_post',
+          post_id: lsc_post_params.post_id,
         },
         dataType: 'json',
         success: function (json) {
@@ -27,7 +29,7 @@
           uploadMessage.text(json.data.text);
           if (json.success) {
             uploadMessage.addClass('success');
-            $('.upload-resource-table .date_' + server_id).text(json.data.date);
+            $('.upload-post-table .date_' + server_id).text(json.data.date);
           } else {
             uploadMessage.addClass('error');
           }
