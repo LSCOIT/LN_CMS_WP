@@ -16,10 +16,10 @@ class LSC_Post
     add_action('enqueue_block_editor_assets', [$this, 'enqueue_assets']);
     add_action('add_meta_boxes', [$this, 'add_meta_box']);
     add_action('save_post_post', [$this, 'save_meta_fields']);
-    add_filter('manage_posts_columns', [$this, 'additional_columns'], 10, 2);
-    add_filter('manage_pages_columns', [$this, 'additional_columns']);
-    add_action('manage_posts_custom_column', [$this, 'render_additional_columns'], 10, 2);
-    add_action('manage_pages_custom_column', [$this, 'render_additional_columns'], 10, 2);
+    add_filter('manage_post_posts_columns', [$this, 'additional_columns'], 10, 2);
+    add_filter('manage_page_posts_columns', [$this, 'additional_columns']);
+    add_action('manage_post_posts_custom_column', [$this, 'render_additional_columns'], 10, 2);
+    add_action('manage_page_posts_custom_column', [$this, 'render_additional_columns'], 10, 2);
     add_action('restrict_manage_posts', [$this, 'posts_filter_dropdown']);
     add_filter('request', [$this, 'filter_resources']);
     add_filter('acf/fields/taxonomy/query/key=field_topics', [$this, 'filter_topics']);
