@@ -22,8 +22,6 @@ class LSC_Server
       return false;
     }
 
-    var_error_log($data);
-
     $url = "{$server['connection_url']}api/{$path}";
 
     $params = [
@@ -43,7 +41,6 @@ class LSC_Server
       $response_body = wp_remote_retrieve_body($response);
       $resource_array = json_decode($response_body, true);
       if (!empty($resource_array)) {
-        var_error_log($resource_array);
         if (is_assoc($resource_array)) {
           return $resource_array;
         } else {
