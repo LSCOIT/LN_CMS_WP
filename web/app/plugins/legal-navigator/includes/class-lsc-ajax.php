@@ -151,7 +151,7 @@ class LSC_AJAX
 		}
 
 		$server = new LSC_Server();
-		$result = $server->resource_request($server_id, 'topics-resources/resources/documents/upsert', [$resource]);
+		$result = $server->api_request($server_id, 'topics-resources/resources/documents/upsert', [$resource]);
 
 		if ($result) {
 			update_post_meta($post->ID, '_remote_id', $result['id']);
@@ -457,7 +457,7 @@ class LSC_AJAX
 
 		$page = array_merge($page, $page_fields);
 		$server = new LSC_Server();
-		$result = $server->resource_request($server_id, "static-resources/{$page_slug}/upsert", $page);
+		$result = $server->api_request($server_id, "static-resources/{$page_slug}/upsert", $page);
 
 		if ($result) {
 			update_post_meta($post->ID, '_remote_id', $result['id']);
@@ -528,7 +528,7 @@ class LSC_AJAX
 		}
 
 		$server = new LSC_Server();
-		$result = $server->resource_request($server_id, 'topics-resources/topics/documents/upsert', [$topic]);
+		$result = $server->api_request($server_id, 'topics-resources/topics/documents/upsert', [$topic]);
 
 		if ($result) {
 			update_term_meta($term->term_id, '_topic_id', $result['id']);

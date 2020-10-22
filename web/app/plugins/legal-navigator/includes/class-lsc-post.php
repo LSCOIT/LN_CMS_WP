@@ -299,7 +299,7 @@ class LSC_Post
     $server = new LSC_Server();
 
     foreach ($servers as $serv) {
-      $server->resource_request($serv['connection_dir_id'], 'topics-resources/resources/delete', $resource);
+      $server->api_request($serv['connection_dir_id'], 'topics-resources/resources/delete', $resource);
     }
   }
 }

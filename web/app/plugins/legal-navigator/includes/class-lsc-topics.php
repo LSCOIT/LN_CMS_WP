@@ -340,7 +340,7 @@ class LSC_Topics
     $server = new LSC_Server();
 
     foreach ($servers as $serv) {
-      $server->resource_request($serv['connection_dir_id'], 'topics-resources/topics/documents/upsert', [$topic]);
+      $server->api_request($serv['connection_dir_id'], 'topics-resources/topics/documents/upsert', [$topic]);
     }
   }
 }

@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
 
 class LSC_Server
 {
-  function resource_request($server_id, $path, $data = [])
+  function api_request($server_id, $path, $data = [])
   {
     $server = $this->get_server_by_id($server_id);
 
@@ -21,6 +21,8 @@ class LSC_Server
     if (!$auth_token) {
       return false;
     }
+
+    var_error_log($data);
 
     $url = "{$server['connection_url']}api/{$path}";
 
@@ -41,7 +43,12 @@ class LSC_Server
       $response_body = wp_remote_retrieve_body($response);
       $resource_array = json_decode($response_body, true);
       if (!empty($resource_array)) {
-        return array_shift($resource_array);
+        var_error_log($resource_array);
+        if (is_assoc($resource_array)) {
+          return $resource_array;
+        } else {
+          return array_shift($resource_array);
+        }
       } else {
         var_error_log($resource_array);
         return false;
@@ -65,14 +72,15 @@ class LSC_Server
         'body' => [
           'grant_type' => 'client_credentials',
           'client_id' => $server['connection_app_id'],
-          'client_secret' => $server['connection_client_secret_id']
+          'client_secret' => $server['connection_secret_id'],
+          'scope' => "api://{$server['connection_scope_id']}/.default"
         ],
         'headers'  => array(
           'Content-type: application/x-www-form-urlencoded'
         ),
       ];
 
-      $auth_request = wp_remote_post("https://login.microsoftonline.com/{$server_id}/oauth2/token", $params);
+      $auth_request = wp_remote_post("https://login.microsoftonline.com/{$server_id}/oauth2/v2.0/token", $params);
 
       if (is_wp_error($auth_request)) {
         var_error_log($auth_request->get_error_message());
