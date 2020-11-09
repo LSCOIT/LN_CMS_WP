@@ -24,11 +24,11 @@ class LSC_Curated_Experiences
     $servers = get_field('connections', 'option');
     $table = [];
     foreach ($servers as $server) {
-      $server_id = $server['connection_dir_id'];
+      $scope_id = $server['connection_scope_id'];
       $user = wp_get_current_user();
       if (current_user_can('manage_options') || array_intersect($user->roles, $server['connection_allowed_for'])) {
         $table[] = [
-          'value' => $server_id,
+          'value' => $scope_id,
           'title' => $server['connection_name'],
         ];
       }
@@ -72,7 +72,7 @@ class LSC_Curated_Experiences
           <?php foreach ($table as $key => $item) { ?>
             <div class="server-item">
               <label>
-                <input<?php checked($key, 0) ?> type="radio" name="server_id" value="<?php echo $item['value']; ?>"> <?php echo $item['title']; ?>
+                <input<?php checked($key, 0) ?> type="radio" name="scope_id" value="<?php echo $item['value']; ?>"> <?php echo $item['title']; ?>
               </label>
             </div>
           <?php } ?>

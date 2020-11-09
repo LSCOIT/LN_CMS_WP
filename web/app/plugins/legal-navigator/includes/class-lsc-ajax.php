@@ -89,7 +89,7 @@ class LSC_AJAX
 			wp_send_json_error('The post is not saved.');
 		}
 
-		$server_id = $params['server_id'];
+		$scope_id = $params['scope_id'];
 
 		$created_by = get_user_by('id', $post->post_author);
 		$modified_by = get_user_by('id', get_post_meta($post->ID, '_modified_by', true));
@@ -151,7 +151,7 @@ class LSC_AJAX
 		}
 
 		$server = new LSC_Server();
-		$result = $server->api_request($server_id, 'topics-resources/resources/documents/upsert', [$resource]);
+		$result = $server->api_request($scope_id, 'topics-resources/resources/documents/upsert', [$resource]);
 
 		if ($result) {
 			update_post_meta($post->ID, '_remote_id', $result['id']);
@@ -163,7 +163,7 @@ class LSC_AJAX
 			}
 
 			$date = date('Y-m-d H:i:s');
-			$updates[$server_id] = $date;
+			$updates[$scope_id] = $date;
 			update_post_meta($post->ID, '_server_updates', $updates);
 
 			wp_send_json_success([
@@ -183,7 +183,7 @@ class LSC_AJAX
 			wp_send_json_error('The post is not saved.');
 		}
 
-		$server_id = $params['server_id'];
+		$scope_id = $params['scope_id'];
 
 		$locations = get_field('locations', $post->ID);
 		if (!$locations) {
@@ -457,7 +457,7 @@ class LSC_AJAX
 
 		$page = array_merge($page, $page_fields);
 		$server = new LSC_Server();
-		$result = $server->api_request($server_id, "static-resources/{$page_slug}/upsert", $page);
+		$result = $server->api_request($scope_id, "static-resources/{$page_slug}/upsert", $page);
 
 		if ($result) {
 			update_post_meta($post->ID, '_remote_id', $result['id']);
@@ -469,7 +469,7 @@ class LSC_AJAX
 			}
 
 			$date = date('Y-m-d H:i:s');
-			$updates[$server_id] = $date;
+			$updates[$scope_id] = $date;
 			update_post_meta($post->ID, '_server_updates', $updates);
 
 			wp_send_json_success([
@@ -486,7 +486,7 @@ class LSC_AJAX
 		check_ajax_referer('upload-topic', 'security');
 
 		$params = $_POST;
-		$server_id = $params['server_id'];
+		$scope_id = $params['scope_id'];
 		$term = get_term($params['term_id']);
 
 		$created_by = get_user_by('id', get_term_meta($term->term_id, '_created_by', true));
@@ -528,7 +528,7 @@ class LSC_AJAX
 		}
 
 		$server = new LSC_Server();
-		$result = $server->api_request($server_id, 'topics-resources/topics/documents/upsert', [$topic]);
+		$result = $server->api_request($scope_id, 'topics-resources/topics/documents/upsert', [$topic]);
 
 		if ($result) {
 			update_term_meta($term->term_id, '_topic_id', $result['id']);
@@ -540,7 +540,7 @@ class LSC_AJAX
 			}
 
 			$date = date('Y-m-d H:i:s');
-			$updates[$server_id] = $date;
+			$updates[$scope_id] = $date;
 			update_term_meta($term->term_id, '_server_updates', $updates);
 
 			wp_send_json_success([
@@ -560,7 +560,7 @@ class LSC_AJAX
 
 		$items = [];
 		$server = new LSC_Server();
-		$response = $server->get_curated_experiences($params['server_id'], $params['org_unit']);
+		$response = $server->get_curated_experiences($params['scope_id'], $params['org_unit']);
 
 		if ($response) {
 			$items = $response;
@@ -576,7 +576,7 @@ class LSC_AJAX
 		$params = $_POST;
 
 		$server = new LSC_Server();
-		$response = $server->delete_curated_experience($params['server_id'], $params['item']);
+		$response = $server->delete_curated_experience($params['scope_id'], $params['item']);
 
 		if ($response) {
 			wp_send_json_success();
@@ -590,7 +590,7 @@ class LSC_AJAX
 		check_ajax_referer('curated-experiences', 'security');
 
 		$params = $_POST;
-		$server_id = $params['server_id'];
+		$scope_id = $params['scope_id'];
 
 		$form_data = [
 			'name' => $params['name'],
@@ -599,7 +599,7 @@ class LSC_AJAX
 		];
 
 		$server = new LSC_Server();
-		$result = $server->upload_curated_experience($server_id, $form_data);
+		$result = $server->upload_curated_experience($scope_id, $form_data);
 
 		if ($result) {
 			if ($result['errorCode']) {

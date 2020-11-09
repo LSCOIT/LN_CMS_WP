@@ -8,9 +8,9 @@ if (!defined('ABSPATH')) {
 
 class LSC_Server
 {
-  function api_request($server_id, $path, $data = [])
+  function api_request($scope_id, $path, $data = [])
   {
-    $server = $this->get_server_by_id($server_id);
+    $server = $this->get_server_by_id($scope_id);
 
     if (!$server) {
       return false;
@@ -58,8 +58,8 @@ class LSC_Server
 
   private function get_auth_token($server)
   {
-    $server_id = $server['connection_dir_id'];
-    $auth_token = get_transient("server_{$server_id}");
+    $scope_id = $server['connection_scope_id'];
+    $auth_token = get_transient("server_{$scope_id}");
 
     if ($auth_token) {
       return $auth_token;
@@ -70,14 +70,14 @@ class LSC_Server
           'grant_type' => 'client_credentials',
           'client_id' => $server['connection_app_id'],
           'client_secret' => $server['connection_secret_id'],
-          'scope' => "api://{$server['connection_scope_id']}/.default"
+          'scope' => "api://{$scope_id}/.default"
         ],
         'headers'  => array(
           'Content-type: application/x-www-form-urlencoded'
         ),
       ];
 
-      $auth_request = wp_remote_post("https://login.microsoftonline.com/{$server_id}/oauth2/v2.0/token", $params);
+      $auth_request = wp_remote_post("https://login.microsoftonline.com/{$server['connection_dir_id']}/oauth2/v2.0/token", $params);
 
       if (is_wp_error($auth_request)) {
         var_error_log($auth_request->get_error_message());
@@ -86,7 +86,7 @@ class LSC_Server
       } elseif (wp_remote_retrieve_response_code($auth_request) === 200) {
         $auth_body = wp_remote_retrieve_body($auth_request);
         $auth_token = json_decode($auth_body, true);
-        set_transient("server_{$server_id}", $auth_token, $auth_token['expires_in']);
+        set_transient("server_{$scope_id}", $auth_token, $auth_token['expires_in']);
 
         return $auth_token;
       } else {
@@ -97,7 +97,7 @@ class LSC_Server
     }
   }
 
-  private function get_server_by_id($server_id)
+  private function get_server_by_id($scope_id)
   {
     /** @var array */
     $servers = get_field('connections', 'option');
@@ -106,7 +106,7 @@ class LSC_Server
       return false;
     }
 
-    $key = array_search($server_id, array_column($servers, 'connection_dir_id'));
+    $key = array_search($scope_id, array_column($servers, 'connection_scope_id'));
     $server = $servers[$key];
 
     if (!$server) {
@@ -793,9 +793,9 @@ class LSC_Server
     return $locations;
   }
 
-  function get_curated_experiences($server_id, $unit = null)
+  function get_curated_experiences($scope_id, $unit = null)
   {
-    $server = $this->get_server_by_id($server_id);
+    $server = $this->get_server_by_id($scope_id);
 
     if (!$server) {
       return false;
@@ -837,9 +837,9 @@ class LSC_Server
     }
   }
 
-  function delete_curated_experience($server_id, $ce)
+  function delete_curated_experience($scope_id, $ce)
   {
-    $server = $this->get_server_by_id($server_id);
+    $server = $this->get_server_by_id($scope_id);
 
     if (!$server) {
       return false;
@@ -862,6 +862,8 @@ class LSC_Server
       'method' => 'DELETE'
     ];
 
+    var_error_log($url);
+
     $response = wp_remote_request($url, $params);
 
     if (is_wp_error($response)) {
@@ -874,9 +876,9 @@ class LSC_Server
     }
   }
 
-  function upload_curated_experience($server_id, $data)
+  function upload_curated_experience($scope_id, $data)
   {
-    $server = $this->get_server_by_id($server_id);
+    $server = $this->get_server_by_id($scope_id);
 
     if (!$server) {
       return false;

@@ -7,14 +7,14 @@
     });
 
     let org_unit = null;
-    let server_id = $('[name="server_id"]:checked').val();
+    let scope_id = $('[name="scope_id"]:checked').val();
     const table = $('#curated-experiences-table').DataTable({
       ajax: {
         url: lsc_ce_params.ajax_url,
         type: 'POST',
         data: function (data) {
           data.security = lsc_ce_params.curated_experiences_nonce;
-          data.server_id = server_id;
+          data.scope_id = scope_id;
           data.org_unit = org_unit ? org_unit : null;
           data.action = 'lsc_get_curated_experiences';
         },
@@ -35,6 +35,11 @@
           });
           return json;
         },
+      },
+      processing: true,
+      language: {
+        loadingRecords: '&nbsp;',
+        processing: '<div class="spinner"></div>',
       },
       order: [[2, 'desc']],
       columns: [{ data: 'id' }, { data: 'title' }, { data: 'date' }, null, { data: '_ts' }],
@@ -66,9 +71,9 @@
       table.ajax.reload();
     });
 
-    $('[name="server_id"]').change(function () {
+    $('[name="scope_id"]').change(function () {
       if ($(this).prop('checked', true)) {
-        server_id = $(this).val();
+        scope_id = $(this).val();
         table.ajax.reload();
       }
     });
@@ -81,7 +86,7 @@
         data: {
           security: lsc_ce_params.curated_experiences_nonce,
           action: 'lsc_delete_curated_experience',
-          server_id: server_id,
+          scope_id: scope_id,
           item: data,
         },
         dataType: 'json',
@@ -101,7 +106,7 @@
       var form = $(this);
       var form_data = new FormData(this);
       form_data.append('security', lsc_ce_params.curated_experiences_nonce);
-      form_data.append('server_id', server_id);
+      form_data.append('scope_id', scope_id);
       form_data.append('org_unit', org_unit ? org_unit : null);
       form_data.append('action', 'lsc_upload_curated_experience');
 

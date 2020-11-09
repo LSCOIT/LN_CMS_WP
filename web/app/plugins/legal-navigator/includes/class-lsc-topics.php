@@ -146,13 +146,13 @@ class LSC_Topics
     $upload_time = get_term_meta($term->term_id, '_server_updates', true);
     $table = [];
     foreach ($servers as $server) {
-      $server_id = $server['connection_dir_id'];
+      $scope_id = $server['connection_scope_id'];
       $user = wp_get_current_user();
       if (current_user_can('manage_options') || array_intersect($user->roles, $server['connection_allowed_for'])) {
         $table[] = [
-          'value' => $server_id,
+          'value' => $scope_id,
           'title' => $server['connection_name'],
-          'time' => !empty($upload_time[$server_id]) ? wp_date('d/m/Y H:i', strtotime($upload_time[$server_id])) : 'Never'
+          'time' => !empty($upload_time[$scope_id]) ? wp_date('d/m/Y H:i', strtotime($upload_time[$scope_id])) : 'Never'
         ];
       }
     }
@@ -170,7 +170,7 @@ class LSC_Topics
             <?php foreach ($table as $item) { ?>
               <tr>
                 <td>
-                  <input type="radio" name="server_id" value="<?php echo esc_attr($item['value']); ?>">
+                  <input type="radio" name="scope_id" value="<?php echo esc_attr($item['value']); ?>">
                 </td>
                 <td><?php echo $item['title']; ?></td>
                 <td class="date_<?php echo esc_attr($item['value']); ?>"><?php echo $item['time']; ?></td>
@@ -340,7 +340,7 @@ class LSC_Topics
     $server = new LSC_Server();
 
     foreach ($servers as $serv) {
-      $server->api_request($serv['connection_dir_id'], 'topics-resources/topics/documents/upsert', [$topic]);
+      $server->api_request($serv['connection_scope_id'], 'topics-resources/topics/documents/upsert', [$topic]);
     }
   }
 }

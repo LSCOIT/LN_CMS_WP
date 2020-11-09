@@ -5,19 +5,19 @@
     var button = $('#upload-post');
     button.prop('disabled', true);
 
-    $('input[name="server_id"]').click(function () {
+    $('input[name="scope_id"]').click(function () {
       button.prop('disabled', false);
     });
 
     button.on('click', function (event) {
       event.preventDefault();
 
-      const server_id = $('input[name="server_id"]:checked').val();
+      const scope_id = $('input[name="scope_id"]:checked').val();
       $.ajax({
         url: lsc_post_params.ajax_url,
         type: 'post',
         data: {
-          server_id: server_id,
+          scope_id: scope_id,
           security: lsc_post_params.upload_post_nonce,
           action: 'lsc_upload_post',
           post_id: lsc_post_params.post_id,
@@ -29,7 +29,7 @@
           uploadMessage.text(json.data.text);
           if (json.success) {
             uploadMessage.addClass('success');
-            $('.upload-post-table .date_' + server_id).text(json.data.date);
+            $('.upload-post-table .date_' + scope_id).text(json.data.date);
           } else {
             uploadMessage.addClass('error');
           }

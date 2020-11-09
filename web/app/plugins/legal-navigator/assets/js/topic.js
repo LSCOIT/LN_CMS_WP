@@ -5,17 +5,17 @@
     var button = $('#upload-topic');
     button.prop('disabled', true);
 
-    $('input[name="server_id"]').click(function () {
+    $('input[name="scope_id"]').click(function () {
       button.prop('disabled', false);
     });
 
     button.on('click', function () {
-      const server_id = $('input[name="server_id"]:checked').val();
+      const scope_id = $('input[name="scope_id"]:checked').val();
       $.ajax({
         url: lsc_topic_params.ajax_url,
         type: 'post',
         data: {
-          server_id: server_id,
+          scope_id: scope_id,
           security: lsc_topic_params.upload_topic_nonce,
           action: 'lsc_upload_topic',
           term_id: lsc_topic_params.term_id,
@@ -27,7 +27,7 @@
           uploadMessage.text(json.data.text);
           if (json.success) {
             uploadMessage.addClass('success');
-            $('.upload-topic-table .date_' + server_id).text(json.data.date);
+            $('.upload-topic-table .date_' + scope_id).text(json.data.date);
           } else {
             uploadMessage.addClass('error');
           }
