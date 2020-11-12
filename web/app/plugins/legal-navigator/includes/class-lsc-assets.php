@@ -39,7 +39,7 @@ class LSC_Assets
 			wp_enqueue_style('lsc-settings');
 		}
 
-		if ('post' === $screen_id || 'page' === $screen_id) {
+		if ('post' === $screen_id || 'page' === $screen_id || 'edit-post' === $screen_id || 'edit-page' === $screen_id) {
 			wp_enqueue_style('lsc-post');
 		}
 

@@ -64,20 +64,6 @@ class LSC_Topics
     $submenu['edit.php'][15][0] = 'Topics'; // Rename categories to Authors
   }
 
-  private function get_organizational_unit()
-  {
-    $units = get_organizational_unit();
-
-    if (get_current_user_id() && !current_user_can('manage_options')) {
-      $current_user_id = get_current_user_id();
-      $org_unit = get_field('user_organizational_unit', "user_{$current_user_id}");
-      $filtered_unit = [$org_unit => $units[$org_unit]];
-      $units = $filtered_unit;
-    }
-
-    return $units;
-  }
-
   function cat_description($term)
   {
 ?>
@@ -143,16 +129,16 @@ class LSC_Topics
   function server_sync($term)
   {
     $servers = get_field('connections', 'option');
-    $upload_time = get_term_meta($term->term_id, '_server_updates', true);
     $table = [];
     foreach ($servers as $server) {
       $scope_id = $server['connection_scope_id'];
       $user = wp_get_current_user();
       if (current_user_can('manage_options') || array_intersect($user->roles, $server['connection_allowed_for'])) {
+        $upload_time = get_term_meta($term->term_id, "_scope_{$scope_id}", true);
         $table[] = [
           'value' => $scope_id,
           'title' => $server['connection_name'],
-          'time' => !empty($upload_time[$scope_id]) ? wp_date('d/m/Y H:i', strtotime($upload_time[$scope_id])) : 'Never'
+          'time' => $upload_time ? wp_date('d/m/Y H:i', strtotime($upload_time)) : 'Never'
         ];
       }
     }
@@ -194,7 +180,7 @@ class LSC_Topics
         $('input#slug').closest('tr.form-field').remove();
       ");
     ?>
-      <?php
+    <?php
     }
   }
 
@@ -230,6 +216,7 @@ class LSC_Topics
       $new_columns['organizational_unit'] = 'Organizational Unit';
     }
 
+    $new_columns['uploads'] = 'Uploads';
     $new_columns['ranking'] = 'Ranking';
     $new_columns['display'] = 'Display';
 
@@ -242,6 +229,33 @@ class LSC_Topics
       $units = get_organizational_unit();
       $post_unit = get_term_meta($term_id, 'topic_organizational_unit', true);
       echo !empty($units[$post_unit]) ? $units[$post_unit] : '';
+    }
+
+    if ('uploads' === $column) {
+      $servers = get_field('connections', 'option');
+      foreach ($servers as $server) {
+        $scope_id = $server['connection_scope_id'];
+        $upload_time = get_term_meta($term_id, "_scope_{$scope_id}", true);
+        $table[] = [
+          'value' => $scope_id,
+          'title' => $server['connection_name'],
+          'time' => $upload_time ? wp_date('d/m/Y H:i', strtotime($upload_time)) : 'Never'
+        ];
+      }
+    ?>
+      <table class="upload-topic-table">
+        <tr>
+          <th>Server</th>
+          <th>Time</th>
+        </tr>
+        <?php foreach ($table as $item) { ?>
+          <tr>
+            <td><?php echo $item['title']; ?></td>
+            <td><?php echo $item['time']; ?></td>
+          </tr>
+        <?php } ?>
+      </table>
+      <?php
     }
 
     if ('ranking' === $column) {
@@ -277,13 +291,28 @@ class LSC_Topics
             <option<?php selected($key, $current_org_unit); ?> value="<?php echo $key; ?>"><?php echo $unit; ?></option>
             <?php } ?>
         </select>
-        <?php submit_button(__('Filter'), 'secondary', 'filter_action', false, array('id' => 'post-query-submit')); ?>
-        <script>
-          (function($) {
-            $('#posts-filter').attr('method', 'get');
-          })(jQuery);
-        </script>
-<?php }
+      <?php }
+
+      $servers = get_field('connections', 'option');
+      $current_server_status = filter_input(INPUT_GET, 'server_status');
+      ?>
+      <select name="server_status" id="server_status">
+        <option value="">Select Server</option>
+        <?php
+        foreach ($servers as $server) { ?>
+          <optgroup label="<?php echo $server['connection_name']; ?>">
+            <option<?php selected("{$server['connection_scope_id']}_0", $current_server_status); ?> value="<?php echo "{$server['connection_scope_id']}_0"; ?>">- has not been uploaded</option>
+              <option<?php selected("{$server['connection_scope_id']}_1", $current_server_status); ?> value="<?php echo "{$server['connection_scope_id']}_1"; ?>">- has been uploaded</option>
+          </optgroup>
+        <?php } ?>
+      </select>
+      <?php submit_button(__('Filter'), 'secondary', 'filter_action', false, array('id' => 'post-query-submit')); ?>
+      <script>
+        (function($) {
+          $('#posts-filter').attr('method', 'get');
+        })(jQuery);
+      </script>
+<?php
 
       return $match[1] . ob_get_clean();
     };
@@ -308,14 +337,21 @@ class LSC_Topics
     if (function_exists('get_current_screen')) {
       $screen = get_current_screen();
 
-      if (is_admin() && $screen && $screen->taxonomy == 'category' && !wp_doing_ajax() && $screen->id == 'edit-category') {
-        if (isset($_GET['filter_action'])) {
-          if ($current_org_unit = filter_input(INPUT_GET, 'org_unit')) {
-            $args['meta_query'][] = [
-              'key'   => 'topic_organizational_unit',
-              'value' => $current_org_unit
-            ];
-          }
+      if (is_admin() && $screen && $screen->taxonomy == 'category' && !wp_doing_ajax() && $screen->id == 'edit-category' && isset($_GET['filter_action'])) {
+        if ($current_org_unit = filter_input(INPUT_GET, 'org_unit')) {
+          $args['meta_query'][] = [
+            'key'   => 'topic_organizational_unit',
+            'value' => $current_org_unit
+          ];
+        }
+
+
+        if ($server_request = filter_input(INPUT_GET, 'server_status')) {
+          list($scope_id, $uploaded) = explode('_', $server_request);
+          $args['meta_query'][] = [
+            'key' => "_scope_{$scope_id}",
+            'compare' => (bool) $uploaded ? 'EXISTS' : 'NOT EXISTS',
+          ];
         }
       }
     }

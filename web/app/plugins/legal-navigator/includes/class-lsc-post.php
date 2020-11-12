@@ -16,8 +16,8 @@ class LSC_Post
     add_action('enqueue_block_editor_assets', [$this, 'enqueue_assets']);
     add_action('add_meta_boxes', [$this, 'add_meta_box']);
     add_action('save_post_post', [$this, 'save_meta_fields']);
-    add_filter('manage_post_posts_columns', [$this, 'additional_columns'], 10, 2);
-    add_filter('manage_page_posts_columns', [$this, 'additional_columns']);
+    add_filter('manage_posts_columns', [$this, 'additional_columns'], 10, 2);
+    add_filter('manage_pages_columns', [$this, 'additional_columns']);
     add_action('manage_post_posts_custom_column', [$this, 'render_additional_columns'], 10, 2);
     add_action('manage_page_posts_custom_column', [$this, 'render_additional_columns'], 10, 2);
     add_action('restrict_manage_posts', [$this, 'posts_filter_dropdown']);
@@ -119,16 +119,16 @@ class LSC_Post
   function upload_post_meta_box($post)
   {
     $servers = get_field('connections', 'option');
-    $upload_time = get_post_meta($post->ID, '_server_updates', true);
     $table = [];
     foreach ($servers as $server) {
       $scope_id = $server['connection_scope_id'];
       $user = wp_get_current_user();
       if (current_user_can('manage_options') || array_intersect($user->roles, $server['connection_allowed_for'])) {
+        $upload_time = get_post_meta($post->ID, "_scope_{$scope_id}", true);
         $table[] = [
           'value' => $scope_id,
           'title' => $server['connection_name'],
-          'time' => !empty($upload_time[$scope_id]) ? wp_date('d/m/Y H:i', strtotime($upload_time[$scope_id])) : 'Never'
+          'time' => $upload_time ? wp_date('d/m/Y H:i', strtotime($upload_time)) : 'Never'
         ];
       }
     }
@@ -179,6 +179,7 @@ class LSC_Post
       $new_columns['resource_type'] = 'Resource Type';
     }
 
+    $new_columns['uploads'] = 'Uploads';
 
     if (isset($columns['title'])) {
       return lsc_array_insert_after($columns, 'title', $new_columns);
@@ -203,13 +204,38 @@ class LSC_Post
     if ('resource_type' === $column) {
       echo get_post_meta($post_id, 'resource_type', true);
     }
+
+    if ('uploads' === $column) {
+      $servers = get_field('connections', 'option');
+      foreach ($servers as $server) {
+        $scope_id = $server['connection_scope_id'];
+        $upload_time = get_post_meta($post_id, "_scope_{$scope_id}", true);
+        $table[] = [
+          'value' => $scope_id,
+          'title' => $server['connection_name'],
+          'time' => $upload_time ? wp_date('d/m/Y H:i', strtotime($upload_time)) : 'Never'
+        ];
+      }
+    ?>
+      <table class="upload-post-table">
+        <tr>
+          <th>Server</th>
+          <th>Time</th>
+        </tr>
+        <?php foreach ($table as $item) { ?>
+          <tr>
+            <td><?php echo $item['title']; ?></td>
+            <td><?php echo $item['time']; ?></td>
+          </tr>
+        <?php } ?>
+      </table>
+    <?php
+    }
   }
 
   function posts_filter_dropdown()
   {
-    if ('edit-post' !== get_current_screen()->id) {
-      return;
-    }
+    $current_screen_id = get_current_screen()->id;
 
     if (current_user_can('manage_options')) {
       $current_org_unit = filter_input(INPUT_GET, 'org_unit');
@@ -224,17 +250,35 @@ class LSC_Post
       </select>
     <?php }
 
-    $current_resource_type = filter_input(INPUT_GET, 'resource_type');
+      if ('edit-post' === $current_screen_id) {
+      $current_resource_type = filter_input(INPUT_GET, 'resource_type');
     ?>
-    <select name="resource_type" id="resource_type">
-      <option value="">Select Type</option>
+      <select name="resource_type" id="resource_type">
+        <option value="">Select Type</option>
+        <?php
+        $resource_type = get_resource_types();
+        foreach ($resource_type as $type) { ?>
+          <option<?php selected($type, $current_resource_type); ?> value="<?php echo $type; ?>"><?php echo $type; ?></option>
+          <?php } ?>
+      </select>
+    <?php
+    }
+
+    $servers = get_field('connections', 'option');
+    $current_server_status = filter_input(INPUT_GET, 'server_status');
+    ?>
+    <select name="server_status" id="server_status">
+      <option value="">Select Server</option>
       <?php
-      $resource_type = get_resource_types();
-      foreach ($resource_type as $type) { ?>
-        <option<?php selected($type, $current_resource_type); ?> value="<?php echo $type; ?>"><?php echo $type; ?></option>
-        <?php } ?>
+      foreach ($servers as $server) { ?>
+        <optgroup label="<?php echo $server['connection_name']; ?>">
+          <option<?php selected("{$server['connection_scope_id']}_0", $current_server_status); ?> value="<?php echo "{$server['connection_scope_id']}_0"; ?>">- has not been uploaded</option>
+              <option<?php selected("{$server['connection_scope_id']}_1", $current_server_status); ?> value="<?php echo "{$server['connection_scope_id']}_1"; ?>">- has been uploaded</option>
+        </optgroup>
+      <?php } ?>
     </select>
-<?php }
+<?php
+  }
 
   function filter_resources($args)
   {
@@ -260,6 +304,14 @@ class LSC_Post
       $args['meta_query'][] = [
         'key' => 'resource_type',
         'value' => $resource_type,
+      ];
+    }
+
+    if ($server_request = filter_input(INPUT_GET, 'server_status')) {
+      list($scope_id, $uploaded) = explode('_', $server_request);
+      $args['meta_query'][] = [
+        'key' => "_scope_{$scope_id}",
+        'compare' => (bool) $uploaded ? 'EXISTS' : 'NOT EXISTS',
       ];
     }
 

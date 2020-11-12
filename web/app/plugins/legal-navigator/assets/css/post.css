@@ -35,3 +35,15 @@ table.upload-post-table,
 .upload-post-table td input[type='radio'] {
   margin-right: 0;
 }
+
+.column-organizational_unit {
+  width: 120px;
+}
+
+.column-uploads {
+  width: 200px;
+}
+
+.column-uploads .upload-post-table th {
+  font-weight: bold;
+}

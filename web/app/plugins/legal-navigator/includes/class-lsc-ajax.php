@@ -156,15 +156,8 @@ class LSC_AJAX
 		if ($result) {
 			update_post_meta($post->ID, '_remote_id', $result['id']);
 
-			$updates = get_post_meta($post->ID, '_server_updates', true);
-
-			if (!$updates) {
-				$updates = [];
-			}
-
 			$date = date('Y-m-d H:i:s');
-			$updates[$scope_id] = $date;
-			update_post_meta($post->ID, '_server_updates', $updates);
+			update_post_meta($post->ID, "_scope_{$scope_id}", $date);
 
 			wp_send_json_success([
 				'text' => 'The resource is successfully uploaded',
@@ -462,15 +455,8 @@ class LSC_AJAX
 		if ($result) {
 			update_post_meta($post->ID, '_remote_id', $result['id']);
 
-			$updates = get_post_meta($post->ID, '_server_updates', true);
-
-			if (!$updates) {
-				$updates = [];
-			}
-
 			$date = date('Y-m-d H:i:s');
-			$updates[$scope_id] = $date;
-			update_post_meta($post->ID, '_server_updates', $updates);
+			update_post_meta($post->ID, "_scope_{$scope_id}", $date);
 
 			wp_send_json_success([
 				'text' => 'The page is successfully uploaded',
@@ -533,15 +519,8 @@ class LSC_AJAX
 		if ($result) {
 			update_term_meta($term->term_id, '_topic_id', $result['id']);
 
-			$updates = get_term_meta($term->term_id, '_server_updates', true);
-
-			if (!$updates) {
-				$updates = [];
-			}
-
 			$date = date('Y-m-d H:i:s');
-			$updates[$scope_id] = $date;
-			update_term_meta($term->term_id, '_server_updates', $updates);
+			update_term_meta($term->term_id, "_scope_{$scope_id}", $date);
 
 			wp_send_json_success([
 				'text' => 'The topic is successfully uploaded',
