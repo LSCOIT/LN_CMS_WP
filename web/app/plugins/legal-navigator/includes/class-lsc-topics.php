@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 class LSC_Topics
 {
 
-  function __construct()
+  public function __construct()
   {
     add_action('admin_init', [$this, 'change_labels']);
     add_action('admin_menu', [$this, 'change_cat_label']);
@@ -32,8 +32,7 @@ class LSC_Topics
   }
 
 
-  function change_labels()
-  {
+  public function change_labels(): void {
     global $wp_taxonomies;
     $labels = &$wp_taxonomies['category']->labels;
     $labels->name = 'Topic';
@@ -64,8 +63,7 @@ class LSC_Topics
     $submenu['edit.php'][15][0] = 'Topics'; // Rename categories to Authors
   }
 
-  function cat_description($term)
-  {
+  public function cat_description($term): void {
 ?>
     <table class="form-table">
       <?php if ($topic_id = get_term_meta($term->term_id, '_topic_id', true)) { ?>
@@ -126,8 +124,7 @@ class LSC_Topics
   <?php
   }
 
-  function server_sync($term)
-  {
+  public function server_sync($term): void {
     $servers = get_field('connections', 'option');
     $table = [];
     foreach ($servers as $server) {
@@ -138,7 +135,7 @@ class LSC_Topics
         $table[] = [
           'value' => $scope_id,
           'title' => $server['connection_name'],
-          'time' => $upload_time ? wp_date('d/m/Y H:i', strtotime($upload_time)) : 'Never'
+          'time' => $upload_time ? wp_date('m/d/Y H:i', strtotime($upload_time)) : 'Never'
         ];
       }
     }
@@ -174,7 +171,7 @@ class LSC_Topics
   function remove_default_category_description()
   {
     global $current_screen;
-    if ($current_screen->id == 'edit-category') {
+    if ( $current_screen->id === 'edit-category') {
       lsc_enqueue_js("
         $('textarea#description').closest('tr.form-field').remove();
         $('input#slug').closest('tr.form-field').remove();
@@ -184,26 +181,23 @@ class LSC_Topics
     }
   }
 
-  function add_meta_fields($term_id)
-  {
+  public function add_meta_fields($term_id): void {
     $user_id = get_current_user_id();
-    $date = wp_date('Y-m-d H:i:s');
+    $date = current_time('mysql');
     add_term_meta($term_id, '_created_time', $date);
     add_term_meta($term_id, '_created_by', $user_id);
     add_term_meta($term_id, '_modified_time', $date);
     add_term_meta($term_id, '_modified_by', $user_id);
   }
 
-  function update_meta_fields($term_id)
-  {
+  public function update_meta_fields($term_id): void {
     $user_id = get_current_user_id();
-    $date = wp_date('Y-m-d H:i:s');
+    $date = current_time('mysql');
     update_term_meta($term_id, '_modified_time', $date);
     update_term_meta($term_id, '_modified_by', $user_id);
   }
 
-  function additional_columns($columns)
-  {
+  public function additional_columns($columns): array {
     if (empty($columns) && !is_array($columns)) {
       $columns = array();
     }
@@ -239,7 +233,7 @@ class LSC_Topics
         $table[] = [
           'value' => $scope_id,
           'title' => $server['connection_name'],
-          'time' => $upload_time ? wp_date('d/m/Y H:i', strtotime($upload_time)) : 'Never'
+          'time' => $upload_time ? wp_date('m/d/Y H:i', strtotime($upload_time)) : 'Never'
         ];
       }
     ?>
@@ -269,14 +263,12 @@ class LSC_Topics
     return $columns;
   }
 
-  public function pre_form()
-  {
+  public function pre_form(): void {
     ob_start();
   }
 
 
-  public function add_topic_filters()
-  {
+  public function add_topic_filters(): void {
     $html                    = ob_get_clean();
     $__preg_replace_callback = function ($match) {
       ob_start();
@@ -337,7 +329,7 @@ class LSC_Topics
     if (function_exists('get_current_screen')) {
       $screen = get_current_screen();
 
-      if (is_admin() && $screen && $screen->taxonomy == 'category' && !wp_doing_ajax() && $screen->id == 'edit-category' && isset($_GET['filter_action'])) {
+      if (is_admin() && $screen && $screen->taxonomy === 'category' && !wp_doing_ajax() && $screen->id === 'edit-category' && isset($_GET['filter_action'])) {
         if ($current_org_unit = filter_input(INPUT_GET, 'org_unit')) {
           $args['meta_query'][] = [
             'key'   => 'topic_organizational_unit',
@@ -359,7 +351,7 @@ class LSC_Topics
     return $args;
   }
 
-  function delete_topic_from_servers($term_id, $taxonomy)
+  public function delete_topic_from_servers($term_id, $taxonomy)
   {
     if ('category' !== $taxonomy) {
       return;

@@ -156,12 +156,12 @@ class LSC_AJAX
 		if ($result) {
 			update_post_meta($post->ID, '_remote_id', $result['id']);
 
-			$date = date('Y-m-d H:i:s');
+			$date = current_time('mysql');
 			update_post_meta($post->ID, "_scope_{$scope_id}", $date);
 
 			wp_send_json_success([
 				'text' => 'The resource is successfully uploaded',
-				'date' => wp_date('d/m/Y H:i', strtotime($date))
+				'date' => wp_date('m/d/Y H:i', strtotime($date))
 			]);
 		}
 
@@ -455,12 +455,12 @@ class LSC_AJAX
 		if ($result) {
 			update_post_meta($post->ID, '_remote_id', $result['id']);
 
-			$date = date('Y-m-d H:i:s');
+			$date = current_time('mysql');
 			update_post_meta($post->ID, "_scope_{$scope_id}", $date);
 
 			wp_send_json_success([
 				'text' => 'The page is successfully uploaded',
-				'date' => wp_date('d/m/Y H:i', strtotime($date))
+				'date' => wp_date('m/d/Y H:i', strtotime($date))
 			]);
 		}
 
@@ -519,12 +519,12 @@ class LSC_AJAX
 		if ($result) {
 			update_term_meta($term->term_id, '_topic_id', $result['id']);
 
-			$date = date('Y-m-d H:i:s');
+			$date = current_time('mysql');
 			update_term_meta($term->term_id, "_scope_{$scope_id}", $date);
 
 			wp_send_json_success([
 				'text' => 'The topic is successfully uploaded',
-				'date' => wp_date('d/m/Y H:i', strtotime($date))
+				'date' => wp_date('m/d/Y H:i', strtotime($date))
 			]);
 		}
 

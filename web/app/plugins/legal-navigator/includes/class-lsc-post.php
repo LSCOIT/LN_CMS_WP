@@ -28,7 +28,7 @@ class LSC_Post
     add_filter('acf/load_field/name=resource_type', [$this, 'get_resource_type']);
   }
 
-  function rename_posts_labels($labels)
+  public function rename_posts_labels($labels)
   {
     $new = array(
       'name'                  => 'Resources',
@@ -54,7 +54,7 @@ class LSC_Post
     return (object) array_merge((array) $labels, $new);
   }
 
-  function review_updated_messages($messages)
+  public function review_updated_messages($messages)
   {
     global $post;
 
@@ -80,27 +80,24 @@ class LSC_Post
     return $messages;
   }
 
-  function get_resource_type($field)
+  public function get_resource_type($field)
   {
     $field['choices'] = array_combine(get_resource_types(), get_resource_types());
     return $field;
   }
 
-  function enqueue_assets()
-  {
+  public function enqueue_assets(): void {
     wp_enqueue_script('lsc-gutenberg-sidebar', lsc_asset_path('js/resources-sidebar.js'), array('wp-blocks', 'wp-edit-post'), LSC_VERSION);
   }
 
-  function add_meta_box()
-  {
+  public function add_meta_box(): void {
     add_meta_box('resource-meta', 'Resource Information', [$this, 'post_meta_box'], 'post', 'side');
     add_meta_box('resource-meta', 'Page Information', [$this, 'post_meta_box'], 'page', 'side');
     add_meta_box('upload-post-meta', 'Resource Upload', [$this, 'upload_post_meta_box'], 'post', 'side');
     add_meta_box('upload-post-meta', 'Page Upload', [$this, 'upload_post_meta_box'], 'page', 'side');
   }
 
-  function post_meta_box($post)
-  {
+  public function post_meta_box($post): void {
     if ($resource_id = get_post_meta($post->ID, '_remote_id', true)) {
       echo '<p><strong>Remote ID:</strong> ' . esc_attr($resource_id) . '</p>';
     }
@@ -128,7 +125,7 @@ class LSC_Post
         $table[] = [
           'value' => $scope_id,
           'title' => $server['connection_name'],
-          'time' => $upload_time ? wp_date('d/m/Y H:i', strtotime($upload_time)) : 'Never'
+          'time' => $upload_time ? wp_date('m/d/Y H:i', strtotime($upload_time)) : 'Never'
         ];
       }
     }
@@ -159,7 +156,7 @@ class LSC_Post
     update_post_meta($post_ID, '_modified_by', get_current_user_id());
   }
 
-  function additional_columns($columns, $post_type = 'page')
+  public function additional_columns($columns, $post_type = 'page')
   {
     if (empty($columns) && !is_array($columns)) {
       $columns = array();
@@ -192,8 +189,7 @@ class LSC_Post
     return array_merge($columns, $new_columns);
   }
 
-  function render_additional_columns($column, $post_id)
-  {
+  public function render_additional_columns($column, $post_id): void {
     if ('organizational_unit' === $column) {
       $units = get_organizational_unit();
       $post_unit = get_post_meta($post_id, 'organizational_unit', true);
@@ -213,7 +209,7 @@ class LSC_Post
         $table[] = [
           'value' => $scope_id,
           'title' => $server['connection_name'],
-          'time' => $upload_time ? wp_date('d/m/Y H:i', strtotime($upload_time)) : 'Never'
+          'time' => $upload_time ? wp_date('m/d/Y H:i', strtotime($upload_time)) : 'Never'
         ];
       }
     ?>

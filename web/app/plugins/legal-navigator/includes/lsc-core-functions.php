@@ -86,49 +86,26 @@ function get_organizational_unit()
   ];
 }
 
-function get_topic_id_by_uid($topic_uid)
-{
-  $topics = get_terms([
-    'taxonomy'   => 'category',
-    'hide_empty'    => false,
-    'fields' => 'ids',
-    'meta_query' => [
-      [
-        'key' => '_topic_id',
-        'value' => $topic_uid,
-      ]
-    ]
-  ]);
+function get_topic_id_by_uid($topic_uid) {
+	global $wpdb;
+	$query = $wpdb->prepare(
+		"SELECT term_id FROM $wpdb->termmeta WHERE meta_key = %s AND meta_value = %s",
+		'_topic_id',
+		$topic_uid
+	);
 
-  $topic = array_shift($topics);
-
-  if ($topic) {
-    return $topic;
-  }
-
-  return null;
+	return $wpdb->get_var( $query );
 }
 
-function get_post_id_by_uid($resource_uid)
-{
-  $resources = get_posts([
-    'numberposts' => 1,
-    'post_type' => 'any',
-    'meta_query' => [
-      [
-        'key' => '_remote_id',
-        'value' => $resource_uid,
-      ]
-    ]
-  ]);
+function get_post_id_by_uid($resource_uid) {
+	global $wpdb;
+	$query = $wpdb->prepare(
+		"SELECT post_id FROM $wpdb->postmeta WHERE meta_key = %s AND meta_value = %s",
+		'_remote_id',
+		$resource_uid
+	);
 
-  $resource = array_shift($resources);
-
-  if ($resource) {
-    return $resource->ID;
-  }
-
-  return null;
+	return $wpdb->get_var( $query );
 }
 
 function array_diff_assoc_recursive($array1, $array2)
